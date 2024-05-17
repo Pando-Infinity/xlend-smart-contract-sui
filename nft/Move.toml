@@ -3,8 +3,7 @@ name = "nft_test"
 edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 # license = ""           # e.g., "MIT", "GPL", "Apache 2.0"
 # authors = ["..."]      # e.g., ["Joe Smith (joesmith@noemail.com)", "John Snow (johnsnow@noemail.com)"]
-published-at = "0x424d4ca8d8dea4e74197d925e7bae7a5920395be6a556be77f48d482d0ef020f"
-
+published-at = "0xb9a2b156353b24214af4c7a8563cb4e5705e085979436fa2030135d6f1b91114"
 [dependencies]
 Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
 

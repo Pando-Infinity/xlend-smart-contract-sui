@@ -72,6 +72,30 @@ module 0x0::nft_test {
         transfer::public_transfer(nft, sender);
     }
 
+    public fun mint_to_recipient(
+        name: vector<u8>,
+        description: vector<u8>,
+        url: vector<u8>,
+        recipient: address,
+        ctx: &mut TxContext
+    ) {
+        let sender = tx_context::sender(ctx);
+        let nft = DevNetNFT {
+            id: object::new(ctx),
+            name: string::utf8(name),
+            description: string::utf8(description),
+            url: url::new_unsafe_from_bytes(url)
+        };
+
+        event::emit(NFTMinted {
+            object_id: object::id(&nft),
+            creator: sender,
+            name: nft.name,
+        });
+
+        transfer::public_transfer(nft, recipient);
+    }
+
     /// Transfer `nft` to `recipient`
     public fun transfer(
         nft: DevNetNFT, recipient: address, _: &mut TxContext
