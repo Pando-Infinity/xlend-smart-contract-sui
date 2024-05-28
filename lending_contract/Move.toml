@@ -1,0 +1,11 @@
+[package]
+name = "lending_contract"
+version = "0.0.1"
+published-at=""
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet" }
+[addresses]
+lending_contract = "0x0"
+admin = "0x06a1f20c51495a6dbadf04f26ea76679f9e00abad8a5fa600677ebcd4b09daaa"
+operator="0x06a1f20c51495a6dbadf04f26ea76679f9e00abad8a5fa600677ebcd4b09daaa"
