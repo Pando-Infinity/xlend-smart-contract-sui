@@ -7,6 +7,7 @@ module lending_contract::operator {
     use lending_contract::state::{Self, State};
     use lending_contract::asset_tier::{Self, AssetTier, AssetTierKey};
     use lending_contract::version::{Self, Version};
+    use lending_contract::configuration::{Self, Configuration};
 
     friend lending_contract::admin;
 
@@ -68,6 +69,23 @@ module lending_contract::operator {
             asset_tier,
             amount,
             duration,
+        );
+    }
+
+    public entry fun update_configuration(
+        version: &Version,
+        _: &OperatorCap,
+        configuration: &mut Configuration,
+        lender_fee_percent: u64,
+        borrower_fee_percent: u64,
+        min_health_ratio: u64, 
+    ) {
+        version::assert_current_version(version);
+        configuration::update(
+            configuration,
+            lender_fee_percent,
+            borrower_fee_percent,
+            min_health_ratio,
         );
     }
 }
