@@ -1,15 +1,17 @@
 module lending_contract::state {
     use sui::tx_context::TxContext;
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
     use sui::transfer;
     use sui::dynamic_object_field as ofield;
-
+    use sui::table::{Self, Table};
 
     friend lending_contract::operator;
     friend lending_contract::admin;
 
     struct State has key, store{
-        id: UID
+        id: UID,
+        offers: Table<address, Table<u64, ID>>, 
+        loans: Table<address, Table<u64, ID>>,
     }
 
     public(friend) fun new(
@@ -17,6 +19,8 @@ module lending_contract::state {
     ) {
         let state = State {
             id: object::new(ctx),
+            offers: table::new<address, Table<u64, ID>>(ctx),
+            loans: table::new<address, Table<u64, ID>>(ctx),
         };
 
         transfer::share_object(state);
