@@ -33,7 +33,7 @@ module lending_contract::operator {
         transfer::transfer(operator_cap, user_address);
     }
 
-    public entry fun create_round<T>(
+    public entry fun create_asset_tier<T>(
         _: &OperatorCap,
         version: &Version,
         state: &mut State,
@@ -45,6 +45,7 @@ module lending_contract::operator {
         version::assert_current_version(version);
 
         let asset_tier = asset_tier::new<T>(
+            name,
             amount,
             duration,
             ctx,
@@ -53,7 +54,7 @@ module lending_contract::operator {
         state::add<AssetTierKey<T>, AssetTier<T>>(state, asset_tier_key, asset_tier);
     }
 
-    public entry fun update_round<T>(
+    public entry fun update_asset_tier<T>(
         _: &OperatorCap,
         version: &Version,
         state: &mut State,

@@ -1,9 +1,18 @@
 module lending_contract::asset_tier {
     use sui::tx_context::TxContext;
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
+    use sui::event;
+
     use std::string::{String};
 
     friend lending_contract::operator;
+
+    struct NewAssetTierEvent has copy, drop {
+        id: ID,
+        name: String,
+        amount: u64,
+        duration: u64,
+    }
 
     struct AssetTierKey<phantom T> has copy, drop, store {
         name: String
@@ -16,15 +25,25 @@ module lending_contract::asset_tier {
     }
 
     public(friend) fun new<T>(
+        name: String,
         amount: u64,
         duration: u64,
         ctx: &mut TxContext,
     ): AssetTier<T> {
-        AssetTier<T> {
+        let asset_tier = AssetTier<T> {
             id: object::new(ctx),
             amount,
             duration,
-        }
+        };
+
+        event::emit(NewAssetTierEvent {
+            id: object::id(&asset_tier),
+            name,
+            amount,
+            duration,
+        });
+
+        asset_tier
     }
 
     public(friend) fun update<T>(
