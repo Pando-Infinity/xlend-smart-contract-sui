@@ -1,0 +1,26 @@
+{
+  "name": "typescript_distribution",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "tsc && node build/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@mysten/sui.js": "^0.54.1",
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "bech32": "^2.0.0",
+    "csv-parser": "^3.0.0",
+    "suioop": "^2.3.2",
+    "ts-node": "^10.9.2"
+  }
+}
