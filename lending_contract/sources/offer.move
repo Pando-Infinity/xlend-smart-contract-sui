@@ -9,6 +9,7 @@ module lending_contract::offer {
 
     use lending_contract::state::{Self, State};
     use lending_contract::asset_tier::{Self, AssetTier, AssetTierKey};
+    use lending_contract::version::{Self, Version};
 
     friend lending_contract::loan;
 
@@ -66,12 +67,14 @@ module lending_contract::offer {
     }
 
     public entry fun create_offer<T>(
+        version: &Version,
         state: &mut State,
         asset_tier_name: String,
         lend_coin: Coin<T>,
         interest: u64,
         ctx: &mut TxContext,
     ) {
+        version::assert_current_version(version);
         let lender = tx_context::sender(ctx);
         
         assert!(interest > 0, EInvalidInterestValue);
@@ -105,10 +108,12 @@ module lending_contract::offer {
     }
 
     public entry fun cancel_offer<T>(
+        version: &Version,
         state: &mut State,
         offer_id: ID,
         ctx: &mut TxContext,
     ) {
+        version::assert_current_version(version);
         let sender = tx_context::sender(ctx);
         let offer_key = new_offer_key<T>(offer_id);
         assert!(state::contain<OfferKey<T>, Offer<T>>(state, offer_key), ENotFoundOfferToCancel);
@@ -140,11 +145,13 @@ module lending_contract::offer {
     }       
 
     public entry fun edit_offer<T>(
+        version: &Version,
         state: &mut State,
         offer_id: ID,
         interest: u64,
         ctx: &mut TxContext,
     ) {
+        version::assert_current_version(version);
         let sender = tx_context::sender(ctx);
         let offer_key = new_offer_key<T>(offer_id);
         assert!(state::contain<OfferKey<T>, Offer<T>>(state, offer_key), ENotFoundOfferToCancel);

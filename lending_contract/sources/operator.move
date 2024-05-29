@@ -8,6 +8,7 @@ module lending_contract::operator {
     use lending_contract::asset_tier::{Self, AssetTier, AssetTierKey};
     use lending_contract::version::{Self, Version};
     use lending_contract::configuration::{Self, Configuration};
+    use lending_contract::custodian;
 
     friend lending_contract::admin;
 
@@ -31,6 +32,15 @@ module lending_contract::operator {
             id: object::new(ctx),
         };
         transfer::transfer(operator_cap, user_address);
+    }
+
+    public entry fun init_system<T>(
+        _: &OperatorCap,
+        ctx: &mut TxContext,
+    ) {
+        custodian::new<T>(ctx);
+        configuration::new(ctx);
+        state::new(ctx);
     }
 
     public entry fun create_asset_tier<T>(

@@ -19,9 +19,6 @@ module lending_contract::admin {
         };
 
         transfer::transfer(admin_cap, @admin);
-        custodian::new(ctx);
-        configuration::new(ctx);
-        state::new(ctx);
     }
 
     public entry fun set_admin(
@@ -65,10 +62,10 @@ module lending_contract::admin {
         );
     }
 
-    public entry fun withdraw_treasury_balance(
+    public entry fun withdraw_treasury_balance<T>(
         version: &Version,
         _: &AdminCap,
-        custodian: &mut Custodian,
+        custodian: &mut Custodian<T>,
         ctx: &mut TxContext,
     ) {
         version::assert_current_version(version);
