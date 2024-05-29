@@ -15,6 +15,8 @@ module lending_contract::loan {
     use lending_contract::custodian::{Self, Custodian};
     use lending_contract::version::{Self, Version};
 
+    friend lending_contract::operator;
+
     const ENotFoundOffer: u64 = 1;
     const EOfferCanNotBeTakeLoan: u64 = 2;
     const ECollateralNotValidToMinHealthRatio: u64 = 3;
@@ -79,6 +81,14 @@ module lending_contract::loan {
         borrower: address,
     }
 
+    struct FinishedLoanEvent has copy, drop {
+        loan_id: ID,
+        offer_id: ID,
+        repay_to_lender_amount: u64,
+        lender: address,
+        borrower: address,
+    }
+
     public entry fun take_loan<T1, T2>(
         version: &Version,
         configuration: &Configuration,
@@ -128,7 +138,7 @@ module lending_contract::loan {
             lender,
             borrower,
             start_timestamp: current_timestamp,
-        })
+        });
     }
 
     public entry fun repay<T1, T2>(
@@ -177,7 +187,43 @@ module lending_contract::loan {
             lend_token,
             collateral_token,
             borrower: sender,
-        })
+        });
+    }
+
+    public(friend) fun finish_loan<T1, T2>(
+        configuration: &Configuration,
+        custodian: &mut Custodian<T1>,
+        state: &mut State, 
+        loan_id: ID,
+        waiting_interest: Coin<T1>,
+        ctx: &mut TxContext,
+    ) {
+        let loan_key = new_loan_key<T1, T2>(loan_id);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ENotFoundLoan);
+        let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
+        
+        let lender_fee_percent = configuration::lender_fee_percent(configuration);
+        let lender_fee_amount = ((loan.amount * lender_fee_percent as u128) / 10000 as u64);
+        let interest_amount = ((loan.amount * loan.interest / 10000 * loan.duration as u128) / (24 * 60 * 60 * 365 as u128) as u64);
+        let repay_to_lender_amount = loan.amount + interest_amount - lender_fee_amount;
+
+        assert!(balance::value<T1>(&loan.repay_balance) == repay_to_lender_amount, ENotEnoughBalanceToRepay);
+        let repay_to_lender_balance = sub_repay_balance<T1, T2>(loan, repay_to_lender_amount);
+        let lender_fee_balance = balance::split<T1>(&mut repay_to_lender_balance, lender_fee_amount);
+
+        let repay_to_lender_coin = coin::from_balance<T1>(repay_to_lender_balance, ctx);
+        coin::join<T1>(&mut repay_to_lender_coin, waiting_interest);
+
+        transfer::public_transfer(repay_to_lender_coin, loan.lender);
+        custodian::add_treasury_balance<T1>(custodian, lender_fee_balance);
+
+        event::emit(FinishedLoanEvent {
+            loan_id,
+            offer_id: loan.offer_id,
+            repay_to_lender_amount,
+            lender: loan.lender,
+            borrower: loan.borrower,
+        });
     }
 
     public fun new_loan_key<T1, T2>(
@@ -217,6 +263,13 @@ module lending_contract::loan {
         repay_balance: Balance<T1>
     ) {
         balance::join<T1>(&mut loan.repay_balance, repay_balance);
+    }
+
+    fun sub_repay_balance<T1, T2>(
+        loan: &mut Loan<T1, T2>,
+        amount: u64,
+    ): Balance<T1> {
+        balance::split<T1>(&mut loan.repay_balance, amount)
     }
 
     fun sub_collateral_balance<T1, T2>(

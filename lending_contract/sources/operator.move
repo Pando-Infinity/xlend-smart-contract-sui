@@ -1,14 +1,16 @@
 module lending_contract::operator {
     use sui::tx_context::{TxContext};
     use std::string::{String};
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
     use sui::transfer::{Self};
+    use sui::coin::{Coin};
 
     use lending_contract::state::{Self, State};
     use lending_contract::asset_tier::{Self, AssetTier, AssetTierKey};
     use lending_contract::version::{Self, Version};
     use lending_contract::configuration::{Self, Configuration};
-    use lending_contract::custodian;
+    use lending_contract::loan;
+    use lending_contract::custodian::{Self, Custodian};
 
     friend lending_contract::admin;
 
@@ -97,6 +99,27 @@ module lending_contract::operator {
             lender_fee_percent,
             borrower_fee_percent,
             min_health_ratio,
+        );
+    }
+
+    public entry fun finish_loan<T1, T2>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &Configuration,
+        custodian: &mut Custodian<T1>,
+        state: &mut State, 
+        loan_id: ID,
+        waiting_interest: Coin<T1>,
+        ctx: &mut TxContext,
+    ) {
+        version::assert_current_version(version);
+        loan::finish_loan<T1, T2>(
+            configuration,
+            custodian,
+            state,
+            loan_id,
+            waiting_interest,
+            ctx,
         );
     }
 }

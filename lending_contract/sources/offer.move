@@ -112,6 +112,7 @@ module lending_contract::offer {
         version: &Version,
         state: &mut State,
         offer_id: ID,
+        waiting_interest: Coin<T>,
         ctx: &mut TxContext,
     ) {
         version::assert_current_version(version);
@@ -125,7 +126,6 @@ module lending_contract::offer {
 
         let refund_coin = coin::zero<T>(ctx);
         //TODO: update this value 
-        let waiting_interest = coin::zero<T>(ctx);
         let lend_amount = offer.amount;
         let lend_balance = balance::split<T>(&mut offer.offer_balance, lend_amount);
 
