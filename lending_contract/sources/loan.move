@@ -52,6 +52,7 @@ module lending_contract::loan {
         borrower: address,
         start_timestamp: u64,
         liquidation: Option<Liquidation<T1,T2>>,
+        // === move to hot wallet ===
         repay_balance: Balance<T1>,
         status: String,
     }
@@ -109,7 +110,9 @@ module lending_contract::loan {
         let loan_id = object::id(&loan);
         let loan_key = new_loan_key<T1, T2>(loan_id);
 
+        let receive_balance = offer::sub_offer_balance<T1>(offer, lend_amount);
         offer::take_loan(offer);
+        transfer::public_transfer(coin::from_balance<T1>(receive_balance, ctx), borrower);
 
         state::add<LoanKey<T1, T2>, Loan<T1,T2>>(state, loan_key, loan);
         state::add_loan(state, loan_id, borrower, ctx);
@@ -159,6 +162,7 @@ module lending_contract::loan {
 
         let repay_balance = coin::into_balance<T1>(repay_coin);
         let borrower_fee_balance = balance::split<T1>(&mut repay_balance, borrower_fee_amount);
+        //TODO: add to hot wallet 
         add_repay_balance<T1, T2>(loan, repay_balance);
         custodian::add_treasury_balance<T1>(custodian, borrower_fee_balance);
 

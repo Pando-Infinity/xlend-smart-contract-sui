@@ -32,11 +32,12 @@ module lending_contract::offer {
     struct Offer<phantom T> has key, store {
         id: UID,
         asset_tier: ID,
-        amount: Balance<T>,
+        amount: u64,
         duration: u64,
         interest: u64,
         status: String,
         lender: address,
+        offer_balance: Balance<T>,
     }
 
     struct NewOfferEvent has copy, drop {
@@ -88,7 +89,7 @@ module lending_contract::offer {
 
         assert!(coin::value(&lend_coin) == lend_amount, ENotEnoughBalanceToCreateOffer);
 
-        let offer = new_offer<T>(asset_tier_id, lend_coin, duration, interest, lender, ctx);
+        let offer = new_offer<T>(asset_tier_id, lend_amount, lend_coin, duration, interest, lender, ctx);
         let offer_id = object::id(&offer);
         let offer_key = new_offer_key<T>(offer_id);
 
@@ -104,7 +105,7 @@ module lending_contract::offer {
             interest,
             status: string::utf8(CREATED_STATUS),
             lender
-        })
+        });
     }
 
     public entry fun cancel_offer<T>(
@@ -125,8 +126,8 @@ module lending_contract::offer {
         let refund_coin = coin::zero<T>(ctx);
         //TODO: update this value 
         let waiting_interest = coin::zero<T>(ctx);
-        let lend_amount = balance::value<T>(&offer.amount);
-        let lend_balance = balance::split<T>(&mut offer.amount, lend_amount);
+        let lend_amount = offer.amount;
+        let lend_balance = balance::split<T>(&mut offer.offer_balance, lend_amount);
 
         coin::join<T>(&mut refund_coin, coin::from_balance<T>(lend_balance, ctx));
         coin::join<T>(&mut refund_coin, waiting_interest);
@@ -141,7 +142,7 @@ module lending_contract::offer {
             duration: offer.duration,
             interest: offer.interest,
             lender: sender,
-        })
+        });
     }       
 
     public entry fun edit_offer<T>(
@@ -164,11 +165,11 @@ module lending_contract::offer {
 
         event::emit(EditedOfferEvent {
             offer_id,
-            amount: balance::value<T>(&offer.amount),
+            amount: offer.amount,
             duration: offer.duration,
             interest: offer.interest,
             lender: sender,
-        })
+        });
     }
 
 
@@ -176,6 +177,13 @@ module lending_contract::offer {
         offer: &mut Offer<T>,
     ) {
         offer.status = string::utf8(LOANED_STATUS);
+    }
+
+    public(friend) fun sub_offer_balance<T>(
+        offer: &mut Offer<T>,
+        amount: u64,
+    ): Balance<T> {
+        balance::split<T>(&mut offer.offer_balance, amount)
     }
 
     public fun can_be_take_loan<T>(
@@ -205,7 +213,7 @@ module lending_contract::offer {
     public fun get_amount<T>(
         offer: &Offer<T>
     ): u64 {
-        balance::value<T>(&offer.amount)
+        offer.amount
     }
 
     public fun get_interest<T>(
@@ -228,6 +236,7 @@ module lending_contract::offer {
 
     fun new_offer<T>(
         asset_tier: ID,
+        lend_amount: u64,
         lend_coin: Coin<T>,
         duration: u64,
         interest: u64,
@@ -237,11 +246,12 @@ module lending_contract::offer {
         Offer<T> {
             id: object::new(ctx),
             asset_tier,
-            amount: coin::into_balance<T>(lend_coin),
+            amount: lend_amount,
             duration,
             interest,
             status: string::utf8(CREATED_STATUS),
             lender,
+            offer_balance: coin::into_balance<T>(lend_coin),
         }
     }
 }
