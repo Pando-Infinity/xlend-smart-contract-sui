@@ -125,7 +125,6 @@ module lending_contract::offer {
         assert!(offer.status == string::utf8(CREATED_STATUS), EInvalidOfferStatus);
 
         let refund_coin = coin::zero<T>(ctx);
-        //TODO: update this value 
         let lend_amount = offer.amount;
         let lend_balance = balance::split<T>(&mut offer.offer_balance, lend_amount);
 
