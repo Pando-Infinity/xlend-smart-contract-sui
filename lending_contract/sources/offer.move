@@ -16,7 +16,7 @@ module lending_contract::offer {
     const ENotFoundAssetTier: u64 = 2;
     const ENotEnoughBalanceToCreateOffer: u64 = 3;
     const ENotFoundOfferToCancel: u64 = 4;
-    const EInvalidOfferStatusToCancel: u64 = 5;
+    const EInvalidOfferStatus: u64 = 5;
     const ESenderIsNotOfferOwner: u64 = 6;
 
     const CREATED_STATUS: vector<u8> = b"Created";
@@ -54,7 +54,14 @@ module lending_contract::offer {
         amount: u64,
         duration: u64,
         interest: u64,
-        status: String,
+        lender: address,
+    }
+
+    struct EditedOfferEvent has copy, drop {
+        offer_id: ID,
+        amount: u64,
+        duration: u64,
+        interest: u64,
         lender: address,
     }
 
@@ -108,7 +115,7 @@ module lending_contract::offer {
         let offer = state::borrow_mut<OfferKey<T>, Offer<T>>(state, offer_key);
         
         assert!(sender == offer.lender, ESenderIsNotOfferOwner);
-        assert!(offer.status == string::utf8(CREATED_STATUS), EInvalidOfferStatusToCancel);
+        assert!(offer.status == string::utf8(CREATED_STATUS), EInvalidOfferStatus);
 
         let refund_coin = coin::zero<T>(ctx);
         //TODO: update this value 
@@ -128,10 +135,34 @@ module lending_contract::offer {
             amount: lend_amount,
             duration: offer.duration,
             interest: offer.interest,
-            status: string::utf8(CANCELLED_STATUS),
             lender: sender,
         })
     }       
+
+    public entry fun edit_offer<T>(
+        state: &mut State,
+        offer_id: ID,
+        interest: u64,
+        ctx: &mut TxContext,
+    ) {
+        let sender = tx_context::sender(ctx);
+        let offer_key = new_offer_key<T>(offer_id);
+        assert!(state::contain<OfferKey<T>, Offer<T>>(state, offer_key), ENotFoundOfferToCancel);
+        let offer = state::borrow_mut<OfferKey<T>, Offer<T>>(state, offer_key);
+        
+        assert!(sender == offer.lender, ESenderIsNotOfferOwner);
+        assert!(offer.status == string::utf8(CREATED_STATUS), EInvalidOfferStatus);
+
+        offer.interest = interest;
+
+        event::emit(EditedOfferEvent {
+            offer_id,
+            amount: balance::value<T>(&offer.amount),
+            duration: offer.duration,
+            interest: offer.interest,
+            lender: sender,
+        })
+    }
 
 
     public(friend) fun take_loan<T>(
