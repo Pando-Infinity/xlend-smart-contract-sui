@@ -4,6 +4,7 @@ module lending_contract::offer {
     use sui::balance::{Self, Balance};
     use sui::coin::{Self, Coin};
     use sui::event;
+    use sui::transfer;
     use std::string::{Self, String};
 
     use lending_contract::state::{Self, State};
@@ -14,10 +15,13 @@ module lending_contract::offer {
     const EInvalidInterestValue: u64 = 1;
     const ENotFoundAssetTier: u64 = 2;
     const ENotEnoughBalanceToCreateOffer: u64 = 3;
+    const ENotFoundOfferToCancel: u64 = 4;
+    const EInvalidOfferStatusToCancel: u64 = 5;
+    const ESenderIsNotOfferOwner: u64 = 6;
 
     const CREATED_STATUS: vector<u8> = b"Created";
     const CANCELLING_STATUS: vector<u8> = b"Cancelling";
-    const CANCELLED_STATUS: vector<u8> = b"Canceled";
+    const CANCELLED_STATUS: vector<u8> = b"Cancelled";
     const LOANED_STATUS: vector<u8> = b"Loaned";
 
     struct OfferKey<phantom T> has store, copy, drop {
@@ -38,6 +42,15 @@ module lending_contract::offer {
         offer_id: ID,
         asset_tier_id: ID,
         asset_tier_name: String,
+        amount: u64,
+        duration: u64,
+        interest: u64,
+        status: String,
+        lender: address,
+    }
+
+    struct CancelledOfferEvent has copy, drop {
+        offer_id: ID,
         amount: u64,
         duration: u64,
         interest: u64,
@@ -83,6 +96,43 @@ module lending_contract::offer {
             lender
         })
     }
+
+    public entry fun cancel_offer<T>(
+        state: &mut State,
+        offer_id: ID,
+        ctx: &mut TxContext,
+    ) {
+        let sender = tx_context::sender(ctx);
+        let offer_key = new_offer_key<T>(offer_id);
+        assert!(state::contain<OfferKey<T>, Offer<T>>(state, offer_key), ENotFoundOfferToCancel);
+        let offer = state::borrow_mut<OfferKey<T>, Offer<T>>(state, offer_key);
+        
+        assert!(sender == offer.lender, ESenderIsNotOfferOwner);
+        assert!(offer.status == string::utf8(CREATED_STATUS), EInvalidOfferStatusToCancel);
+
+        let refund_coin = coin::zero<T>(ctx);
+        //TODO: update this value 
+        let waiting_interest = coin::zero<T>(ctx);
+        let lend_amount = balance::value<T>(&offer.amount);
+        let lend_balance = balance::split<T>(&mut offer.amount, lend_amount);
+
+        coin::join<T>(&mut refund_coin, coin::from_balance<T>(lend_balance, ctx));
+        coin::join<T>(&mut refund_coin, waiting_interest);
+
+        transfer::public_transfer(refund_coin, sender);
+
+        offer.status = string::utf8(CANCELLED_STATUS);
+
+        event::emit(CancelledOfferEvent {
+            offer_id,
+            amount: lend_amount,
+            duration: offer.duration,
+            interest: offer.interest,
+            status: string::utf8(CANCELLED_STATUS),
+            lender: sender,
+        })
+    }       
+
 
     public(friend) fun take_loan<T>(
         offer: &mut Offer<T>,
