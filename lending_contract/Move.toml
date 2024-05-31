@@ -4,8 +4,12 @@ version = "0.0.1"
 published-at=""
 
 [dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet" }
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "041c5f2bae2fe52079e44b70514333532d69f4e6" }
+Wormhole = { git = "https://github.com/wormhole-foundation/wormhole.git", subdir = "sui/wormhole", rev = "sui/testnet" }
+
 [addresses]
 lending_contract = "0x0"
 admin = "0x06a1f20c51495a6dbadf04f26ea76679f9e00abad8a5fa600677ebcd4b09daaa"
 operator="0x06a1f20c51495a6dbadf04f26ea76679f9e00abad8a5fa600677ebcd4b09daaa"
+hot_wallet="0x06a1f20c51495a6dbadf04f26ea76679f9e00abad8a5fa600677ebcd4b09daaa"
+wormhole = "0xf47329f4344f3bf0f8e436e2f7b485466cff300f12a166563995d3888c296a94"

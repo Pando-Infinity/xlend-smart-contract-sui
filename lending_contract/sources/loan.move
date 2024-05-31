@@ -6,14 +6,21 @@ module lending_contract::loan {
     use sui::clock::{Self, Clock};
     use sui::event;
     use sui::transfer;
+    use sui::sui::{SUI};
     use std::string::{Self, String};
     use std::option::{Self, Option};
+    use std::vector;
 
     use lending_contract::offer::{Self, Offer, OfferKey};
     use lending_contract::state::{Self, State};
     use lending_contract::configuration::{Self, Configuration};
     use lending_contract::custodian::{Self, Custodian};
     use lending_contract::version::{Self, Version};
+    use lending_contract::utils;
+    use lending_contract::wormhole;
+
+    use wormhole::emitter::{EmitterCap};
+    use wormhole::state::{State as WormholeState};
 
     friend lending_contract::operator;
 
@@ -139,6 +146,39 @@ module lending_contract::loan {
             borrower,
             start_timestamp: current_timestamp,
         });
+    }
+
+    public entry fun take_loan_cross_chain<T>(
+        version: &Version,
+        emitter_cap: &mut EmitterCap,
+        wormhole_state: &mut WormholeState,
+        target_chain: u64,
+        target_address: vector<u8>,
+        offer_id: vector<u8>,
+        collateral_amount: u64,
+        collateral_symbol: vector<u8>,
+        collateral_coin: Coin<T>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        transfer::public_transfer(collateral_coin, @hot_wallet);
+
+        let message_fee_coin = coin::zero<SUI>(ctx);
+        let payload = gen_take_loan_payload(
+            target_chain,
+            target_address,
+            offer_id,
+            collateral_amount,
+            collateral_symbol,
+        );
+
+        wormhole::send_message(
+            emitter_cap,
+            wormhole_state,
+            payload,
+            message_fee_coin,
+            clock,
+        );
     }
 
     public entry fun repay<T1, T2>(
@@ -286,5 +326,28 @@ module lending_contract::loan {
     ): bool {
         //TODO: use price feeds getting price lend token price and collateral token price to check health ratio
         true
+    }
+
+    fun gen_take_loan_payload(
+        target_chain: u64,
+        target_address: vector<u8>,
+        offer_id: vector<u8>,
+        collateral_amount: u64,
+        collateral_symbol: vector<u8>,
+    ): vector<u8> {
+        let target_chain_utf8 = utils::u64_to_bytes(target_chain);
+        let collateral_amount_utf8 = utils::u64_to_bytes(collateral_amount);
+        let payload: vector<u8> = vector[];
+        vector::append(&mut payload, target_chain_utf8);
+        vector::append(&mut payload, b",");
+        vector::append(&mut payload, target_address);
+        vector::append(&mut payload, b",");
+        vector::append(&mut payload, offer_id);
+        vector::append(&mut payload, b",");
+        vector::append(&mut payload, collateral_amount_utf8);
+        vector::append(&mut payload, b",");
+        vector::append(&mut payload, collateral_symbol);
+
+        payload
     }
 }
