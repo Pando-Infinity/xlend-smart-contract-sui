@@ -21,6 +21,7 @@ module lending_contract::offer {
     const EInvalidOfferStatus: u64 = 5;
     const ESenderIsNotOfferOwner: u64 = 6;
     const ESenderIsInvalid: u64 = 7;
+    const ELendCoinIsInvalid: u64 = 8;
 
     const CREATED_STATUS: vector<u8> = b"Created";
     const CANCELLING_STATUS: vector<u8> = b"Cancelling";
@@ -153,6 +154,7 @@ module lending_contract::offer {
         state: &mut State,
         configuration: &Configuration,
         offer_id: ID,
+        lend_coin: Coin<T>,
         // waiting_interest: Coin<T>,
         ctx: &mut TxContext,
     ) {
@@ -161,19 +163,23 @@ module lending_contract::offer {
         let offer_key = new_offer_key<T>(offer_id);
         assert!(state::contain<OfferKey<T>, Offer<T>>(state, offer_key), ENotFoundOfferToCancel);
         let offer = state::borrow_mut<OfferKey<T>, Offer<T>>(state, offer_key);
-
+        let lend_amount = offer.amount;
+        let lender = offer.lender;
         let hot_wallet = configuration::hot_wallet(configuration);
+
         assert!(sender == hot_wallet, ESenderIsInvalid);
         assert!(offer.status == string::utf8(CANCELLING_STATUS), EInvalidOfferStatus);
+        assert!(coin::value(&lend_coin) == lend_amount, ELendCoinIsInvalid);
 
+        transfer::public_transfer(lend_coin, lender );
         offer.status = string::utf8(CANCELLED_STATUS);
 
         event::emit(CancelledOfferEvent {
             offer_id,
-            amount: offer.amount,
+            amount: lend_amount,
             duration: offer.duration,
             interest: offer.interest,
-            lender: sender,
+            lender: lender,
         });
     }
 
