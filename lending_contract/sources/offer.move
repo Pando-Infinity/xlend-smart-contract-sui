@@ -124,7 +124,6 @@ module lending_contract::offer {
     public entry fun request_cancel_offer<T>(
         version: &Version,
         state: &mut State,
-        // configuration: &Configuration,
         offer_id: ID,
         // waiting_interest: Coin<T>,
         ctx: &mut TxContext,
@@ -177,43 +176,6 @@ module lending_contract::offer {
             lender: sender,
         });
     }
-    // public entry fun cancel_offer<T>(
-    //     version: &Version,
-    //     state: &mut State,
-    //     configuration: & Configuration,
-    //     offer_id: ID,
-    //     waiting_interest: Coin<T>,
-    //     ctx: &mut TxContext,
-    // ) {
-    //     version::assert_current_version(version);
-    //     let sender = tx_context::sender(ctx);
-    //     let offer_key = new_offer_key<T>(offer_id);
-    //     assert!(state::contain<OfferKey<T>, Offer<T>>(state, offer_key), ENotFoundOfferToCancel);
-    //     let offer = state::borrow_mut<OfferKey<T>, Offer<T>>(state, offer_key);
-        
-    //     assert!(sender == offer.lender, ESenderIsNotOfferOwner);
-    //     assert!(offer.status == string::utf8(CREATED_STATUS), EInvalidOfferStatus);
-
-    //     let refund_coin = coin::zero<T>(ctx);
-    //     let lend_amount = offer.amount;
-        
-    //     let lend_balance = balance::split<T>(&mut offer.offer_balance, lend_amount);
-
-    //     coin::join<T>(&mut refund_coin, coin::from_balance<T>(lend_balance, ctx));
-    //     coin::join<T>(&mut refund_coin, waiting_interest);
-
-    //     transfer::public_transfer(refund_coin, sender);
-
-    //     offer.status = string::utf8(CANCELLED_STATUS);
-
-    //     event::emit(CancelledOfferEvent {
-    //         offer_id,
-    //         amount: lend_amount,
-    //         duration: offer.duration,
-    //         interest: offer.interest,
-    //         lender: sender,
-    //     });
-    // }       
 
     public entry fun edit_offer<T>(
         version: &Version,
@@ -242,19 +204,11 @@ module lending_contract::offer {
         });
     }
 
-
     public(friend) fun take_loan<T>(
         offer: &mut Offer<T>,
     ) {
         offer.status = string::utf8(LOANED_STATUS);
     }
-
-    // public(friend) fun sub_offer_balance<T>(
-    //     offer: &mut Offer<T>,
-    //     amount: u64,
-    // ): Balance<T> {
-    //     balance::split<T>(&mut offer.offer_balance, amount)
-    // }
 
     public fun can_be_take_loan<T>(
         offer: &Offer<T>
