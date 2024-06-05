@@ -38,10 +38,11 @@ module lending_contract::operator {
 
     public entry fun init_system<T>(
         _: &OperatorCap,
+        hot_wallet: address,
         ctx: &mut TxContext,
     ) {
         custodian::new<T>(ctx);
-        configuration::new(ctx);
+        configuration::new(hot_wallet, ctx);
         state::new(ctx);
     }
 
@@ -91,7 +92,8 @@ module lending_contract::operator {
         configuration: &mut Configuration,
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
-        min_health_ratio: u64, 
+        min_health_ratio: u64,
+        wallet: address,
     ) {
         version::assert_current_version(version);
         configuration::update(
@@ -99,6 +101,7 @@ module lending_contract::operator {
             lender_fee_percent,
             borrower_fee_percent,
             min_health_ratio,
+            wallet,
         );
     }
 

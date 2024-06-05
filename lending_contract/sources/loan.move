@@ -89,57 +89,57 @@ module lending_contract::loan {
         borrower: address,
     }
 
-    public entry fun take_loan<T1, T2>(
-        version: &Version,
-        configuration: &Configuration,
-        state: &mut State,
-        offer_id: ID,
-        collateral: Coin<T2>,
-        lend_token: String,
-        collateral_token: String,
-        clock: &Clock,
-        ctx: &mut TxContext,
-    ) {
-        version::assert_current_version(version);
-        let current_timestamp = clock::timestamp_ms(clock);
-        let borrower = tx_context::sender(ctx);
+    // public entry fun take_loan<T1, T2>(
+    //     version: &Version,
+    //     configuration: &Configuration,
+    //     state: &mut State,
+    //     offer_id: ID,
+    //     collateral: Coin<T2>,
+    //     lend_token: String,
+    //     collateral_token: String,
+    //     clock: &Clock,
+    //     ctx: &mut TxContext,
+    // ) {
+    //     version::assert_current_version(version);
+    //     let current_timestamp = clock::timestamp_ms(clock);
+    //     let borrower = tx_context::sender(ctx);
 
-        let offer_key = offer::new_offer_key<T1>(offer_id);
-        assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), ENotFoundOffer);
-        let offer = state::borrow_mut<OfferKey<T1>, Offer<T1>>(state, offer_key);
-        assert!(offer::can_be_take_loan<T1>(offer), EOfferCanNotBeTakeLoan);
-        let lender = offer::get_lender<T1>(offer);
-        let lend_amount = offer::get_amount<T1>(offer);
-        let duration = offer::get_duration<T1>(offer);
+    //     let offer_key = offer::new_offer_key<T1>(offer_id);
+    //     assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), ENotFoundOffer);
+    //     let offer = state::borrow_mut<OfferKey<T1>, Offer<T1>>(state, offer_key);
+    //     assert!(offer::can_be_take_loan<T1>(offer), EOfferCanNotBeTakeLoan);
+    //     let lender = offer::get_lender<T1>(offer);
+    //     let lend_amount = offer::get_amount<T1>(offer);
+    //     let duration = offer::get_duration<T1>(offer);
 
-        let collateral_amount = coin::value<T2>(&collateral);
+    //     let collateral_amount = coin::value<T2>(&collateral);
     
-        assert!(is_valid_collateral(configuration, lend_amount, collateral_amount), ECollateralNotValidToMinHealthRatio);
+    //     assert!(is_valid_collateral(configuration, lend_amount, collateral_amount), ECollateralNotValidToMinHealthRatio);
 
-        let loan = new_loan<T1, T2>(offer, collateral, lender, borrower, current_timestamp, ctx);
-        let loan_id = object::id(&loan);
-        let loan_key = new_loan_key<T1, T2>(loan_id);
+    //     let loan = new_loan<T1, T2>(offer, collateral, lender, borrower, current_timestamp, ctx);
+    //     let loan_id = object::id(&loan);
+    //     let loan_key = new_loan_key<T1, T2>(loan_id);
 
-        let receive_balance = offer::sub_offer_balance<T1>(offer, lend_amount);
-        offer::take_loan(offer);
-        transfer::public_transfer(coin::from_balance<T1>(receive_balance, ctx), borrower);
+    //     let receive_balance = offer::sub_offer_balance<T1>(offer, lend_amount);
+    //     offer::take_loan(offer);
+    //     transfer::public_transfer(coin::from_balance<T1>(receive_balance, ctx), borrower);
 
-        state::add<LoanKey<T1, T2>, Loan<T1,T2>>(state, loan_key, loan);
-        state::add_loan(state, loan_id, borrower, ctx);
+    //     state::add<LoanKey<T1, T2>, Loan<T1,T2>>(state, loan_key, loan);
+    //     state::add_loan(state, loan_id, borrower, ctx);
 
-        event::emit(FundTransferredEvent {
-            loan_id,
-            offer_id,
-            amount: lend_amount,
-            duration,
-            collateral_amount,
-            lend_token,
-            collateral_token,
-            lender,
-            borrower,
-            start_timestamp: current_timestamp,
-        });
-    }
+    //     event::emit(FundTransferredEvent {
+    //         loan_id,
+    //         offer_id,
+    //         amount: lend_amount,
+    //         duration,
+    //         collateral_amount,
+    //         lend_token,
+    //         collateral_token,
+    //         lender,
+    //         borrower,
+    //         start_timestamp: current_timestamp,
+    //     });
+    // }
 
     public entry fun repay<T1, T2>(
         version: &Version,
