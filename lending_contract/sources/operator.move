@@ -112,6 +112,7 @@ module lending_contract::operator {
         custodian: &mut Custodian<T1>,
         state: &mut State, 
         loan_id: ID,
+        repay_coin: Coin<T1>,
         waiting_interest: Coin<T1>,
         ctx: &mut TxContext,
     ) {
@@ -121,6 +122,7 @@ module lending_contract::operator {
             custodian,
             state,
             loan_id,
+            repay_coin,
             waiting_interest,
             ctx,
         );
