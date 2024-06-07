@@ -2,7 +2,7 @@ module lending_contract::loan {
     use sui::tx_context::{Self, TxContext};
     use sui::object::{Self, UID, ID};
     use sui::balance::{Self, Balance};
-    use sui::coin::{Self, Coin};
+    use sui::coin::{Self, Coin, CoinMetadata};
     use sui::clock::{Self, Clock};
     use sui::event;
     use sui::transfer;
@@ -148,28 +148,34 @@ module lending_contract::loan {
         });
     }
 
-    public entry fun take_loan_cross_chain<T>(
+    public entry fun take_loan_crosschain<T>(
         version: &Version,
         emitter_cap: &mut EmitterCap,
         wormhole_state: &mut WormholeState,
+        coin_metadata: &CoinMetadata<T>,
+        collateral_coin: Coin<T>,
         target_chain: u64,
         target_address: vector<u8>,
+        tier_id: vector<u8>,
         offer_id: vector<u8>,
-        collateral_amount: u64,
-        collateral_symbol: vector<u8>,
-        collateral_coin: Coin<T>,
+        pyth_collateral_symbol: vector<u8>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
+        let collateral_amount = coin::value<T>(&collateral_coin);
         transfer::public_transfer(collateral_coin, @hot_wallet);
 
         let message_fee_coin = coin::zero<SUI>(ctx);
-        let payload = gen_take_loan_payload(
+
+        let collateral_decimal = coin::get_decimals<T>(coin_metadata);
+        let payload = gen_take_loan_crosschain_payload(
             target_chain,
             target_address,
+            tier_id,
             offer_id,
             collateral_amount,
-            collateral_symbol,
+            pyth_collateral_symbol,
+            collateral_decimal,
         );
 
         wormhole::send_message(
@@ -328,25 +334,34 @@ module lending_contract::loan {
         true
     }
 
-    fun gen_take_loan_payload(
+    fun gen_take_loan_crosschain_payload(
         target_chain: u64,
         target_address: vector<u8>,
+        tier_id: vector<u8>,
         offer_id: vector<u8>,
         collateral_amount: u64,
-        collateral_symbol: vector<u8>,
+        pyth_collateral_symbol: vector<u8>,
+        collateral_decimal: u8,
     ): vector<u8> {
         let target_chain_utf8 = utils::u64_to_bytes(target_chain);
         let collateral_amount_utf8 = utils::u64_to_bytes(collateral_amount);
+        let collateral_decimal_utf8 = utils::u64_to_bytes((collateral_decimal as u64));
         let payload: vector<u8> = vector[];
         vector::append(&mut payload, target_chain_utf8);
         vector::append(&mut payload, b",");
         vector::append(&mut payload, target_address);
         vector::append(&mut payload, b",");
+        vector::append(&mut payload, b"create_loan_offer_crosschain");
+        vector::append(&mut payload, b",");
+        vector::append(&mut payload, tier_id);
+        vector::append(&mut payload, b",");
         vector::append(&mut payload, offer_id);
         vector::append(&mut payload, b",");
         vector::append(&mut payload, collateral_amount_utf8);
         vector::append(&mut payload, b",");
-        vector::append(&mut payload, collateral_symbol);
+        vector::append(&mut payload, pyth_collateral_symbol);
+        vector::append(&mut payload, b",");
+        vector::append(&mut payload, collateral_decimal_utf8);
 
         payload
     }

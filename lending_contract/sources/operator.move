@@ -5,12 +5,15 @@ module lending_contract::operator {
     use sui::transfer::{Self};
     use sui::coin::{Coin};
 
+    use wormhole::state::{State as WormholeState};
+
     use lending_contract::state::{Self, State};
     use lending_contract::asset_tier::{Self, AssetTier, AssetTierKey};
     use lending_contract::version::{Self, Version};
     use lending_contract::configuration::{Self, Configuration};
     use lending_contract::loan;
     use lending_contract::custodian::{Self, Custodian};
+    use lending_contract::wormhole;
 
     friend lending_contract::admin;
 
@@ -38,11 +41,25 @@ module lending_contract::operator {
 
     public entry fun init_system<T>(
         _: &OperatorCap,
+        version: &Version,
         ctx: &mut TxContext,
     ) {
+        version::assert_current_version(version);
+
         custodian::new<T>(ctx);
         configuration::new(ctx);
         state::new(ctx);
+    }
+
+    public entry fun init_wormhole_emitter(
+        _: &OperatorCap,
+        version: &Version,
+        wormhole_state: &WormholeState,
+        ctx: &mut TxContext,
+    ) {
+        version::assert_current_version(version);
+
+        wormhole::init_emitter(wormhole_state, ctx);
     }
 
     public entry fun create_asset_tier<T>(
