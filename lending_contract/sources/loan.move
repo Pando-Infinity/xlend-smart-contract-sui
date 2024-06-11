@@ -2,7 +2,7 @@ module lending_contract::loan {
     use sui::tx_context::{Self, TxContext};
     use sui::object::{Self, UID, ID};
     use sui::balance::{Self, Balance};
-    use sui::coin::{Self, Coin};
+    use sui::coin::{Self, Coin, CoinMetadata};
     use sui::clock::{Self, Clock};
     use sui::event;
     use sui::transfer;
@@ -112,8 +112,8 @@ module lending_contract::loan {
         state: &mut State,
         offer_id: ID,
         collateral: Coin<T2>,
-        lend_token: String,
-        collateral_token: String,
+        lend_coin_metadata: &CoinMetadata<T1>,
+        collateral_coin_metadata: &CoinMetadata<T2>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -144,6 +144,10 @@ module lending_contract::loan {
         state::add<LoanKey<T1, T2>, Loan<T1,T2>>(state, loan_key, loan);
         state::add_loan(state, loan_id, borrower, ctx);
 
+        let lend_token_ascii = coin::get_symbol<T1>(lend_coin_metadata);
+        let lend_token = string::from_ascii(lend_token_ascii);
+        let collateral_token_ascii = coin::get_symbol<T2>(collateral_coin_metadata);
+        let collateral_token = string::from_ascii(collateral_token_ascii);
         event::emit(RequestLoanEvent {
             loan_id,
             offer_id,
@@ -165,8 +169,8 @@ module lending_contract::loan {
         offer_id: ID,
         loan_id: ID,
         lend_coin: Coin<T1>,
-        lend_token: String,
-        collateral_token: String,
+        lend_coin_metadata: &CoinMetadata<T1>,
+        collateral_coin_metadata: &CoinMetadata<T2>,
         ctx: &mut TxContext,
     ) {
         version::assert_current_version(version);
@@ -192,6 +196,10 @@ module lending_contract::loan {
         transfer::public_transfer(lend_coin, borrower);
         loan.status = string::utf8(FUND_TRANSFERRED_STATUS);
 
+        let lend_token_ascii = coin::get_symbol<T1>(lend_coin_metadata);
+        let lend_token = string::from_ascii(lend_token_ascii);
+        let collateral_token_ascii = coin::get_symbol<T2>(collateral_coin_metadata);
+        let collateral_token = string::from_ascii(collateral_token_ascii);
         event::emit(FundTransferredEvent {
             loan_id,
             offer_id,
@@ -211,8 +219,8 @@ module lending_contract::loan {
         state: &mut State,
         loan_id: ID,
         repay_coin: Coin<T1>,
-        lend_token: String,
-        collateral_token: String,
+        lend_coin_metadata: &CoinMetadata<T1>,
+        collateral_coin_metadata: &CoinMetadata<T2>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -247,6 +255,10 @@ module lending_contract::loan {
         transfer::public_transfer(coin::from_balance(collateral_balance, ctx), sender);
         loan.status = string::utf8(BORROWER_PAID_STATUS);
 
+        let lend_token_ascii = coin::get_symbol<T1>(lend_coin_metadata);
+        let lend_token = string::from_ascii(lend_token_ascii);
+        let collateral_token_ascii = coin::get_symbol<T2>(collateral_coin_metadata);
+        let collateral_token = string::from_ascii(collateral_token_ascii);
         event::emit(BorrowerPaidEvent {
             loan_id,
             repay_amount,
