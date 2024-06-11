@@ -13,6 +13,7 @@ module lending_contract::offer {
     use lending_contract::version::{Self, Version};
 
     friend lending_contract::loan;
+    friend lending_contract::operator;
 
     const EInvalidInterestValue: u64 = 1;
     const ENotFoundAssetTier: u64 = 2;
@@ -94,7 +95,7 @@ module lending_contract::offer {
         let asset_tier_key = asset_tier::new_asset_tier_key<T>(asset_tier_name);
         assert!(state::contain<AssetTierKey<T>, AssetTier<T>>(state, asset_tier_key), ENotFoundAssetTier);
         let asset_tier = state::borrow<AssetTierKey<T>, AssetTier<T>>(state, asset_tier_key);
-        let asset_tier_id = asset_tier::get_id(asset_tier);
+        let asset_tier_id = asset_tier::id(asset_tier);
         let lend_amount = asset_tier::amount(asset_tier);
         let duration = asset_tier::duration(asset_tier);
 
@@ -126,7 +127,6 @@ module lending_contract::offer {
         version: &Version,
         state: &mut State,
         offer_id: ID,
-        // waiting_interest: Coin<T>,
         ctx: &mut TxContext,
     ) {
         version::assert_current_version(version);
@@ -149,13 +149,13 @@ module lending_contract::offer {
         });
     }
 
-    public entry fun cancelled_offer<T>(
+    public(friend) fun cancel_offer<T>(
         version: &Version,
         state: &mut State,
         configuration: &Configuration,
         offer_id: ID,
         lend_coin: Coin<T>,
-        // waiting_interest: Coin<T>,
+        waiting_interest: Coin<T>,
         ctx: &mut TxContext,
     ) {
         version::assert_current_version(version);
@@ -171,6 +171,7 @@ module lending_contract::offer {
         assert!(offer.status == string::utf8(CANCELLING_STATUS), EInvalidOfferStatus);
         assert!(coin::value(&lend_coin) == lend_amount, ELendCoinIsInvalid);
 
+        coin::join<T>(&mut lend_coin, waiting_interest);
         transfer::public_transfer(lend_coin, lender );
         offer.status = string::utf8(CANCELLED_STATUS);
 
@@ -216,7 +217,7 @@ module lending_contract::offer {
         offer.status = string::utf8(LOANED_STATUS);
     }
 
-    public fun can_be_take_loan<T>(
+    public fun is_available<T>(
         offer: &Offer<T>
     ): bool {
         if (offer.status != string::utf8(CREATED_STATUS)) {

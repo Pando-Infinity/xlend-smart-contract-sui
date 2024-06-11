@@ -10,6 +10,7 @@ module lending_contract::operator {
     use lending_contract::version::{Self, Version};
     use lending_contract::configuration::{Self, Configuration};
     use lending_contract::loan;
+    use lending_contract::offer;
     use lending_contract::custodian::{Self, Custodian};
 
     friend lending_contract::admin;
@@ -102,6 +103,27 @@ module lending_contract::operator {
             borrower_fee_percent,
             min_health_ratio,
             wallet,
+        );
+    }
+
+    public entry fun cancel_offer<T>(
+        _: &OperatorCap,
+        version: &Version,
+        state: &mut State,
+        configuration: &Configuration,
+        offer_id: ID,
+        lend_coin: Coin<T>,
+        waiting_interest: Coin<T>,
+        ctx: &mut TxContext,
+    ) {
+        offer::cancel_offer<T>(
+            version,
+            state,
+            configuration,
+            offer_id,
+            lend_coin,
+            waiting_interest,
+            ctx,
         );
     }
 

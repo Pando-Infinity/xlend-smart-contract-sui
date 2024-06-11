@@ -17,10 +17,10 @@ module lending_contract::loan {
 
     friend lending_contract::operator;
 
-    const ENotFoundOffer: u64 = 1;
-    const EOfferCanNotBeTakeLoan: u64 = 2;
+    const EOfferNotFound: u64 = 1;
+    const EOffferIsNotActive: u64 = 2;
     const ECollateralNotValidToMinHealthRatio: u64 = 3;
-    const ENotFoundLoan: u64 = 4;
+    const ELoanNotFound: u64 = 4;
     const ESenderIsNotLoanBorrower: u64 = 5;
     const EInvalidLoanStatus: u64 = 6;
     const ENotEnoughBalanceToRepay: u64 = 7;
@@ -33,6 +33,8 @@ module lending_contract::loan {
     const BORROWER_PAID_STATUS: vector<u8> = b"BorrowerPaid";
     const FINISHED_STATUS: vector<u8> = b"Finished";
 
+    const DEFAULT_RATE_FACTOR: u64 = 10000;
+    const SECOND_IN_YEAR: u64 = 31536000;
     struct Liquidation<phantom T1, phantom T2> has store, drop {
         liquidating_at: u64,
         liquidating_price: u64,
@@ -120,9 +122,9 @@ module lending_contract::loan {
         let borrower = tx_context::sender(ctx);
 
         let offer_key = offer::new_offer_key<T1>(offer_id);
-        assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), ENotFoundOffer);
+        assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), EOfferNotFound);
         let offer = state::borrow_mut<OfferKey<T1>, Offer<T1>>(state, offer_key);
-        assert!(offer::can_be_take_loan<T1>(offer), EOfferCanNotBeTakeLoan);
+        assert!(offer::is_available<T1>(offer), EOffferIsNotActive);
         let lender = offer::get_lender<T1>(offer);
         let lend_amount = offer::get_amount<T1>(offer);
         let duration = offer::get_duration<T1>(offer);
@@ -135,9 +137,9 @@ module lending_contract::loan {
         let loan_id = object::id(&loan);
         let loan_key = new_loan_key<T1, T2>(loan_id);
 
-        // let receive_balance = offer::sub_offer_balance<T1>(offer, lend_amount);
+
         offer::take_loan(offer);
-        // transfer::public_transfer(coin::from_balance<T1>(receive_balance, ctx), borrower);
+
 
         state::add<LoanKey<T1, T2>, Loan<T1,T2>>(state, loan_key, loan);
         state::add_loan(state, loan_id, borrower, ctx);
@@ -174,7 +176,7 @@ module lending_contract::loan {
         assert!(sender == hot_wallet, ESenderIsInvalid);
 
         let offer_key = offer::new_offer_key<T1>(offer_id);
-        assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), ENotFoundOffer);
+        assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), EOfferNotFound);
         let offer = state::borrow_mut<OfferKey<T1>, Offer<T1>>(state, offer_key);
 
         let lender = offer::get_lender<T1>(offer);
@@ -182,7 +184,7 @@ module lending_contract::loan {
         let duration = offer::get_duration<T1>(offer);
 
         let loan_key = new_loan_key<T1, T2>(loan_id);
-        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ENotFoundLoan);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
         let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
         assert!(loan.status == string::utf8(MATCHED_STATUS), EInvalidLoanStatus);
 
@@ -219,7 +221,7 @@ module lending_contract::loan {
         let sender = tx_context::sender(ctx);
         let hot_wallet = configuration::hot_wallet(configuration); 
         let loan_key = new_loan_key<T1, T2>(loan_id);
-        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ENotFoundLoan);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
         let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
 
         assert!(sender == loan.borrower, ESenderIsNotLoanBorrower);
@@ -228,15 +230,14 @@ module lending_contract::loan {
 
         
         let borrower_fee_percent = configuration::borrower_fee_percent(configuration);
-        let borrower_fee_amount = ((loan.amount * borrower_fee_percent as u128) / 10000 as u64);
-        let interest_amount = ((loan.amount * loan.interest / 10000 * loan.duration as u128) / (24 * 60 * 60 * 365 as u128) as u64);
+        let borrower_fee_amount = ((loan.amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
+        let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
         let repay_amount = loan.amount + borrower_fee_amount + interest_amount;
         assert!(coin::value<T1>(&repay_coin) == repay_amount, ENotEnoughBalanceToRepay);
 
         let repay_balance = coin::into_balance<T1>(repay_coin);
         let borrower_fee_balance = balance::split<T1>(&mut repay_balance, borrower_fee_amount);
-        //TODO: add to hot wallet 
-        // add_repay_balance<T1, T2>(loan, repay_balance);
+
         let coin = coin::from_balance(repay_balance, ctx);
         transfer::public_transfer(coin, hot_wallet);
         custodian::add_treasury_balance<T1>(custodian, borrower_fee_balance);
@@ -266,12 +267,12 @@ module lending_contract::loan {
         ctx: &mut TxContext,
     ) {
         let loan_key = new_loan_key<T1, T2>(loan_id);
-        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ENotFoundLoan);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
         let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
         
         let lender_fee_percent = configuration::lender_fee_percent(configuration);
-        let lender_fee_amount = ((loan.amount * lender_fee_percent as u128) / 10000 as u64);
-        let interest_amount = ((loan.amount * loan.interest / 10000 * loan.duration as u128) / (24 * 60 * 60 * 365 as u128) as u64);
+        let lender_fee_amount = ((loan.amount * lender_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64);
+        let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
         let repay_to_lender_amount = loan.amount + interest_amount - lender_fee_amount;
 
         assert!(coin::value<T1>(&repay_coin) == repay_to_lender_amount + lender_fee_amount, ENotEnoughBalanceToRepay);

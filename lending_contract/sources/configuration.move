@@ -33,12 +33,12 @@ module lending_contract::configuration {
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
         min_health_ratio: u64,
-        wallet: address,
+        hot_wallet: address,
     ) {
         configuration.lender_fee_percent = lender_fee_percent;
         configuration.borrower_fee_percent = borrower_fee_percent;
         configuration.min_health_ratio = min_health_ratio; 
-        configuration.hot_wallet = wallet;
+        configuration.hot_wallet = hot_wallet;
     }
 
     public fun lender_fee_percent(
