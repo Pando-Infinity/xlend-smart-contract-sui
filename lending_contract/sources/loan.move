@@ -45,6 +45,8 @@ module lending_contract::loan {
     const SUI_COIN_TYPE: vector<u8> = b"0x587c29de216efd4219573e08a1f6964d4fa7cb714518c2c8a0f29abfa264327d";
     const USDC_COIN_TYPE: vector<u8> = b"0x8adc4a98b8ab67bc3948c7a62233b666c47a5851245a1092888b363c5ca18b44";
 
+    const DEFAULT_RATE_FACTOR: u64 = 10000;
+    const SECOND_IN_YEAR: u64 = 31536000;
     struct Liquidation<phantom T1, phantom T2> has store, drop {
         liquidating_at: u64,
         liquidating_price: u64,
