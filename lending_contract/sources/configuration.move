@@ -58,10 +58,14 @@ module lending_contract::configuration {
     ): address {
         configuration.hot_wallet
     }
-    
+
     public fun min_health_ratio(
         configuration: &Configuration
     ): u64 {
         configuration.min_health_ratio
+    }
+
+    public fun get_threshold (): u64 {
+        1000000000
     }
 }
