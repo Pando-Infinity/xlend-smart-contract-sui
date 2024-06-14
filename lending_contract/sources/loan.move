@@ -20,6 +20,8 @@ module lending_contract::loan {
     use lending_contract::configuration::{Self, Configuration};
     use lending_contract::custodian::{Self, Custodian};
     use lending_contract::version::{Self, Version};
+    use lending_contract::price_feed;
+    use lending_contract::utils;
 
     friend lending_contract::operator;
 
@@ -183,7 +185,6 @@ module lending_contract::loan {
         let lender = offer::get_lender<T1>(offer);
         let lend_amount = offer::get_amount<T1>(offer);
         let duration = offer::get_duration<T1>(offer);
-        let time_threshold = configuration::get_threshold();
 
         let collateral_amount = coin::value<T2>(&collateral);
     
@@ -191,13 +192,13 @@ module lending_contract::loan {
             configuration, 
             lend_amount, 
             collateral_amount, 
-            pyth_state, 
-            price_info_object_collateral, 
-            price_info_object_lending, 
             lend_coin_metadata, 
             collateral_coin_metadata, 
+            pyth_state, 
+            price_info_object_lending, 
+            price_info_object_collateral, 
             clock,
-            ), ECollateralNotValidToMinHealthRatio);
+        ), ECollateralNotValidToMinHealthRatio);
 
         let loan = new_loan<T1, T2>(offer, collateral, lender, borrower, current_timestamp, ctx);
         let loan_id = object::id(&loan);
@@ -436,14 +437,13 @@ module lending_contract::loan {
         configuration: &Configuration,
         lend_amount: u64,
         remaining_collateral_amount: u64,
-        pyth_state: &PythState,
-        price_info_object_collateral: &PriceInfoObject,
-        price_info_object_lending: &PriceInfoObject,
         lend_coin_metadata: &CoinMetadata<T1>,
         collateral_coin_metadata: &CoinMetadata<T2>,
+        pyth_state: &PythState,
+        price_info_object_lending: &PriceInfoObject,
+        price_info_object_collateral: &PriceInfoObject,
         clock: &Clock,
     ): bool {
-        let time_threshold = configuration::get_threshold();
         let lend_decimals = coin::get_decimals<T1>(lend_coin_metadata);
         let collateral_decimals = coin::get_decimals<T2>(collateral_coin_metadata);
         let max_decimals: u64;
@@ -454,85 +454,28 @@ module lending_contract::loan {
             max_decimals = (collateral_decimals as u64);
         };
 
-        let remaining_collateral_price_by_usd = get_value_by_usd<T2>(clock, collateral_coin_metadata, pyth_state, price_info_object_collateral, max_decimals, remaining_collateral_amount);
-        let lend_price_by_usd = get_value_by_usd<T1>(clock, lend_coin_metadata, pyth_state, price_info_object_lending, max_decimals, lend_amount);
-        let current_health_ratio = remaining_collateral_price_by_usd / lend_price_by_usd;
+        let remaining_collateral_price_by_usd = price_feed::get_value_by_usd<T2>(
+            configuration, 
+            max_decimals, 
+            remaining_collateral_amount, 
+            collateral_coin_metadata, 
+            pyth_state, 
+            price_info_object_collateral, 
+            clock
+        );
+        let lend_price_by_usd = price_feed::get_value_by_usd<T1>(
+            configuration, 
+            max_decimals, 
+            lend_amount, 
+            lend_coin_metadata, 
+            pyth_state, 
+            price_info_object_lending, 
+            clock
+        );
+        let current_health_ratio = (remaining_collateral_price_by_usd * (DEFAULT_RATE_FACTOR as u128)) / lend_price_by_usd;
         let min_health_ratio = configuration::min_health_ratio(configuration);
 
-        if( current_health_ratio < min_health_ratio) {
-            false
-        } else {
-            true
-        }
-
-    }
-
-    fun get_value_by_usd<T>(
-        clock: &Clock,
-        coinMetadata: &CoinMetadata<T>,
-        pyth_state: &PythState,
-        price_info_object: &PriceInfoObject,
-        max_decimals: u64,
-        amount: u64,
-    ) : u64 {
-        let time_threshold = configuration::get_threshold();
-        let coin_decimals_u8 = coin::get_decimals<T>(coinMetadata);
-        let sub_decimals = max_decimals - (coin_decimals_u8 as u64);
-
-        let price: Price = get_price_no_older_than(price_info_object, clock, time_threshold);
-        let price_u64 = i64_to_u64(&price::get_price(&price));
-        let exponent_u64 = i64_to_u64(&price::get_expo(&price));
-        let price_USD: u64;
-        let value_USD: u64;
-
-        if (is_negative(&price::get_expo(&price))) {
-            price_USD = price_u64 / power(10, exponent_u64) * power(10, max_decimals);
-        } else {
-            price_USD = price_u64 * power(10, exponent_u64) * power(10, max_decimals);
-        };
-
-        if ((coin_decimals_u8 as u64) == max_decimals) {
-            value_USD = price_USD * amount;
-        } else {
-            value_USD = price_USD * (amount * power(10, sub_decimals))
-        };
-
-        value_USD
-    }
-
-    fun i64_to_u64(
-        price: &I64,
-    ): u64 {
-        let price_value: u64;
-        let is_negative = i64::get_is_negative(price);
-        if (!is_negative) {
-            price_value = i64::get_magnitude_if_positive(price);
-        } else {
-            price_value = i64::get_magnitude_if_negative(price );
-        };
-        price_value
-    }
-
-    fun is_negative (
-        price: &I64,
-    ): bool {
-        let is_negative = i64::get_is_negative(price);
-        if (!is_negative) {
-            false
-        } else {
-            true
-        }
-    }
-
-    fun power(base: u64, exponent: u64): u64 {
-        let result = base;
-        let i = 1;
-        while (i <= exponent) {
-            result = result * base;
-            i = i + 1;
-        };
-
-        result
+        current_health_ratio >= (min_health_ratio as u128)
     }
 
     fun is_valid_coinmetadata<T>(
@@ -555,15 +498,15 @@ module lending_contract::loan {
     }
 
      public entry fun withdraw_collateral_loan_offer<T1, T2>(
-        loan_id: ID,
-        state: &mut State,
         configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
         withdraw_amount: u64,
-        pyth_state: &PythState,
-        price_info_object_collateral: &PriceInfoObject,
-        price_info_object_lending: &PriceInfoObject,
         lend_coin_metadata: &CoinMetadata<T1>,
         collateral_coin_metadata: &CoinMetadata<T2>,
+        pyth_state: &PythState,
+        price_info_object_lending: &PriceInfoObject,
+        price_info_object_collateral: &PriceInfoObject,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -579,8 +522,6 @@ module lending_contract::loan {
         let offer_id = loan.offer_id;
         let lend_amount = loan.amount;
 
-        let time_threshold = configuration::get_threshold();
-
         let sender = tx_context::sender(ctx);
         let collateral_amount = balance::value<T2>(&loan.collateral);
         let remaining_collateral_amount = collateral_amount - withdraw_amount;
@@ -590,13 +531,13 @@ module lending_contract::loan {
             configuration, 
             lend_amount, 
             remaining_collateral_amount, 
-            pyth_state, 
-            price_info_object_collateral, 
-            price_info_object_lending, 
             lend_coin_metadata, 
             collateral_coin_metadata, 
+            pyth_state, 
+            price_info_object_lending, 
+            price_info_object_collateral, 
             clock, 
-            ), ECollateralNotValidToMinHealthRatio);
+        ), ECollateralNotValidToMinHealthRatio);
 
         transfer::public_transfer(coin::from_balance(collateral_balance, ctx), sender);
 
@@ -611,11 +552,11 @@ module lending_contract::loan {
 
     public entry fun deposit_collateral_loan_offer<T1, T2>(
         configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
+        deposit_amount: Coin<T2>,
         lend_coin_metadata: &CoinMetadata<T1>,
         collateral_coin_metadata: &CoinMetadata<T2>,
-        loan_id: ID,
-        deposit_coin: Coin<T2>,
-        state: &mut State,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -635,8 +576,8 @@ module lending_contract::loan {
 
         let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
 
-        let _lend_fee_percentage = configuration::lender_fee_percent(configuration);
-        let _borrow_fee_percentage = configuration::borrower_fee_percent(configuration);
+        let lend_fee_percentage = configuration::lender_fee_percent(configuration);
+        let borrow_fee_percentage = configuration::borrower_fee_percent(configuration);
 
         let lend_token_ascii = coin::get_symbol<T1>(lend_coin_metadata);
         let lend_token = string::from_ascii(lend_token_ascii);
@@ -644,10 +585,10 @@ module lending_contract::loan {
         let collateral_token = string::from_ascii(collateral_token_ascii);
 
         let current_timestamp = clock::timestamp_ms(clock);
-        let _status = string::utf8(MATCHED_STATUS);
+        assert!(loan.status == string::utf8(FUND_TRANSFERRED_STATUS), EInvalidLoanStatus);
 
-        let deposit_amount = coin::value<T2>(&deposit_coin);
-        let deposit_balance = coin::into_balance<T2>(deposit_coin);
+        let deposit_amount_value = coin::value<T2>(&deposit_amount);
+        let deposit_balance = coin::into_balance<T2>(deposit_amount);
 
         add_collateral_balance<T1, T2>(loan, deposit_balance);
 
@@ -658,7 +599,7 @@ module lending_contract::loan {
             lend_offer_id: loan.offer_id,
             interest: loan.interest,
             borrow_amount: loan.amount,
-            lender_fee_percent: _lend_fee_percentage,
+            lender_fee_percent: lend_fee_percentage,
             duration: loan.duration,
             lend_mint_token: lend_token,
             lender: loan.lender,
@@ -666,8 +607,8 @@ module lending_contract::loan {
             borrower: loan.borrower,
             collateral_mint_token: collateral_token,
             collateral_amount: total_collateral_amount,
-            status: _status,
-            borrower_fee_percent: _borrow_fee_percentage,
+            status: loan.status,
+            borrower_fee_percent: borrow_fee_percentage,
             timestamp: current_timestamp,
             }
         );

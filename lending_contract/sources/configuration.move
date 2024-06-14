@@ -5,6 +5,7 @@ module lending_contract::configuration {
 
     friend lending_contract::admin;
     friend lending_contract::operator;
+    friend lending_contract::price_feed;
 
     struct Configuration has key, store {
         id: UID,
@@ -12,6 +13,7 @@ module lending_contract::configuration {
         borrower_fee_percent: u64,
         min_health_ratio: u64,
         hot_wallet: address,
+        price_time_threshold: u64
     }
 
     public(friend) fun new(
@@ -24,6 +26,7 @@ module lending_contract::configuration {
             borrower_fee_percent: 0,
             min_health_ratio: 0,
             hot_wallet: wallet,
+            price_time_threshold: 1000000000,
         };
         transfer::share_object(configuration);
     }
@@ -65,7 +68,9 @@ module lending_contract::configuration {
         configuration.min_health_ratio
     }
 
-    public fun get_threshold (): u64 {
-        1000000000
+    public fun price_time_threshold (
+        configuration: &Configuration
+    ): u64 {
+        configuration.price_time_threshold
     }
 }
