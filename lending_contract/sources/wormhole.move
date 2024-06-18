@@ -9,7 +9,7 @@ module lending_contract::wormhole {
     use wormhole::state::{Self, State};
     use wormhole::publish_message;
 
-    friend lending_contract::loan;
+    friend lending_contract::loan_crosschain;
     friend lending_contract::operator;
 
     #[allow(lint(share_owned))]

@@ -9,6 +9,7 @@ module lending_contract::state {
     friend lending_contract::admin;
     friend lending_contract::offer;
     friend lending_contract::loan;
+    friend lending_contract::loan_crosschain;
 
     struct State has key, store{
         id: UID,
