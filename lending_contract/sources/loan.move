@@ -531,7 +531,7 @@ module lending_contract::loan {
         let sender = tx_context::sender(ctx);
         let collateral_amount = balance::value<T2>(&loan.collateral);
 
-        assert!(collateral_amount - withdraw_amount < 0, ECOLLATERALISINSUFFICIENT);
+        assert!(collateral_amount >= withdraw_amount, ECOLLATERALISINSUFFICIENT);
 
         let remaining_collateral_amount = collateral_amount - withdraw_amount;
 
