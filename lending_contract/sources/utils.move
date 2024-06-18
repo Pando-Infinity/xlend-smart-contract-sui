@@ -7,18 +7,14 @@ module lending_contract::utils {
 
     public(friend) fun power(base: u64, exponent: u64): u64 {
         let result = 1;
-
-        if (exponent == 0) {
-            result
-        } else {
-            let i = 1;
-            while (i <= exponent) {
-                result = result * base;
-                i = i + 1;
-            };
-            result
-        }
-
+        let i = 1;
+            
+        while (i <= exponent) {
+            result = result * base;
+            i = i + 1;
+        };
+        
+        result
     }
 
     public (friend) fun i64_to_u64(

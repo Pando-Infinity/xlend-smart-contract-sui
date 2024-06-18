@@ -32,17 +32,17 @@ module lending_contract::price_feed {
         let exponent_u64 = utils::i64_to_u64(&price::get_expo(&price));
         let max_decimals_power = utils::power(10, max_decimals);
         let exponent_power = utils::power(10, exponent_u64);
-        let price_USD: u128;
+        let price_usd: u128;
 
         if (utils::is_negative(&price::get_expo(&price))) {
-            price_USD = ((price_u64 * max_decimals_power / exponent_power) as u128);
+            price_usd = ((price_u64 * max_decimals_power / exponent_power) as u128);
         } else {
-            price_USD = ((price_u64 * max_decimals_power * exponent_power) as u128 );
+            price_usd = ((price_u64 * max_decimals_power * exponent_power) as u128);
         };
+        
+        let value_usd = price_usd * ((amount * utils::power(10, sub_decimals) / exponent_power) as u128);
 
-        let value_USD = price_USD * ((amount * utils::power(10, sub_decimals)) as u128);
-
-        value_USD
+        value_usd
     }
 
 }

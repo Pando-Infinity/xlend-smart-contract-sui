@@ -36,6 +36,7 @@ module lending_contract::loan {
     const ESenderIsInvalid: u64 = 9;
     const ELendCoinMetadataIsInvalid: u64 = 10;
     const ECollateralCoinMetadataIsInvalid: u64 = 11;
+    const ECOLLATERALISINSUFFICIENT: u64 = 12;
 
     const MATCHED_STATUS: vector<u8> = b"Matched";
     const FUND_TRANSFERRED_STATUS: vector<u8> = b"FundTransferred";
@@ -436,7 +437,7 @@ module lending_contract::loan {
     fun is_valid_collateral_amount<T1, T2>(
         configuration: &Configuration,
         lend_amount: u64,
-        remaining_collateral_amount: u64,
+        collateral_amount: u64,
         lend_coin_metadata: &CoinMetadata<T1>,
         collateral_coin_metadata: &CoinMetadata<T2>,
         pyth_state: &PythState,
@@ -454,10 +455,10 @@ module lending_contract::loan {
             max_decimals = (collateral_decimals as u64);
         };
 
-        let remaining_collateral_price_by_usd = price_feed::get_value_by_usd<T2>(
+        let collateral_value_by_usd = price_feed::get_value_by_usd<T2>(
             configuration, 
             max_decimals, 
-            remaining_collateral_amount, 
+            collateral_amount, 
             collateral_coin_metadata, 
             pyth_state, 
             price_info_object_collateral, 
@@ -472,7 +473,7 @@ module lending_contract::loan {
             price_info_object_lending, 
             clock
         );
-        let current_health_ratio = (remaining_collateral_price_by_usd * (DEFAULT_RATE_FACTOR as u128)) / lend_price_by_usd;
+        let current_health_ratio = (collateral_value_by_usd * (DEFAULT_RATE_FACTOR as u128)) / lend_price_by_usd;
         let min_health_ratio = configuration::min_health_ratio(configuration);
 
         current_health_ratio >= (min_health_ratio as u128)
@@ -498,6 +499,7 @@ module lending_contract::loan {
     }
 
      public entry fun withdraw_collateral_loan_offer<T1, T2>(
+        version: &Version,
         configuration: &Configuration,
         state: &mut State,
         loan_id: ID,
@@ -518,14 +520,18 @@ module lending_contract::loan {
         let loan_key = new_loan_key<T1, T2>(loan_id);
         let current_timestamp = clock::timestamp_ms(clock);
         let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
+
+        assert!(loan.status == string::utf8(FUND_TRANSFERRED_STATUS), EInvalidLoanStatus);
         
         let offer_id = loan.offer_id;
         let lend_amount = loan.amount;
 
         let sender = tx_context::sender(ctx);
         let collateral_amount = balance::value<T2>(&loan.collateral);
+
+        assert!(collateral_amount - withdraw_amount < 0, ECOLLATERALISINSUFFICIENT);
+
         let remaining_collateral_amount = collateral_amount - withdraw_amount;
-        let collateral_balance = sub_collateral_balance<T1, T2>(loan, withdraw_amount);
 
         assert!(is_valid_collateral_amount(
             configuration, 
@@ -539,6 +545,7 @@ module lending_contract::loan {
             clock, 
         ), ECollateralNotValidToMinHealthRatio);
 
+        let collateral_balance = sub_collateral_balance<T1, T2>(loan, withdraw_amount);
         transfer::public_transfer(coin::from_balance(collateral_balance, ctx), sender);
 
          event::emit(WithdrawCollateralEvent {
@@ -551,6 +558,7 @@ module lending_contract::loan {
     }
 
     public entry fun deposit_collateral_loan_offer<T1, T2>(
+        version: &Version,
         configuration: &Configuration,
         state: &mut State,
         loan_id: ID,
@@ -614,4 +622,4 @@ module lending_contract::loan {
         );
 
     }
-    }
+}

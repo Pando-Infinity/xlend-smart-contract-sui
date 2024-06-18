@@ -1,6 +1,6 @@
 module lending_contract::operator {
     use sui::tx_context::{TxContext};
-    use std::string::{String};
+    use std::string::{String};  
     use sui::object::{Self, UID, ID};
     use sui::transfer::{Self};
     use sui::coin::{Coin};
@@ -94,7 +94,8 @@ module lending_contract::operator {
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
         min_health_ratio: u64,
-        wallet: address,
+        hot_wallet: address,
+        price_time_threshold: u64, 
     ) {
         version::assert_current_version(version);
         configuration::update(
@@ -102,7 +103,8 @@ module lending_contract::operator {
             lender_fee_percent,
             borrower_fee_percent,
             min_health_ratio,
-            wallet,
+            hot_wallet,
+            price_time_threshold,
         );
     }
 

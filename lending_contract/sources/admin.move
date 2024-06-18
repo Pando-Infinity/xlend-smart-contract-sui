@@ -52,7 +52,8 @@ module lending_contract::admin {
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
         min_health_ratio: u64, 
-        hot_wallet: address,
+        wallet: address,
+        price_time_threshold: u64,
     ) {
         version::assert_current_version(version);
         configuration::update(
@@ -60,7 +61,8 @@ module lending_contract::admin {
             lender_fee_percent,
             borrower_fee_percent,
             min_health_ratio,
-            hot_wallet
+            wallet,
+            price_time_threshold,
         );
     }
 
