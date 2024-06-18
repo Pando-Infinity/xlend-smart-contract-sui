@@ -390,7 +390,6 @@ module lending_contract::loan {
     }
 
     public (friend) fun start_liquidate_loan_offer<T1, T2>(
-        version: &Version,
         configuration: &Configuration,
         state: &mut State,
         loan_id: ID,
@@ -398,11 +397,8 @@ module lending_contract::loan {
         liquidating_at: u64,
         ctx: &mut TxContext,
     ) {
-        version::assert_current_version(version);
 
-        let sender = tx_context::sender(ctx);
         let hot_wallet = configuration::hot_wallet(configuration);
-        assert!(sender == hot_wallet, ESenderIsInvalid);
 
         let loan_key = new_loan_key<T1, T2>(loan_id);
         assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
@@ -442,21 +438,15 @@ module lending_contract::loan {
     }
 
     public (friend) fun system_liquidate_loan_offer<T1, T2>(
-        version: &Version,
         configuration: &Configuration,
         state: &mut State,
         loan_id: ID,
-        remaining_fund_to_borrower: Coin<T2>,
+        remaining_fund_to_borrower: Coin<T1>,
         collateral_swapped_amount: u64,
         liquidated_price: u64,
         liquidated_tx: String,
         ctx: &mut TxContext,
     ) {
-        version::assert_current_version(version);
-
-        let sender = tx_context::sender(ctx);
-        let hot_wallet = configuration::hot_wallet(configuration);
-        assert!(sender == hot_wallet, ESenderIsInvalid);
 
         let loan_key = new_loan_key<T1, T2>(loan_id);
         assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
@@ -466,7 +456,7 @@ module lending_contract::loan {
         assert!(option::is_some(&loan.liquidation), ELiquidationIsNull );
 
         let lender = loan.lender;
-
+        let borrower = loan.borrower;
         // Borrow the current liquidation structure and update its fields
         let liquidation = option::borrow_mut(&mut loan.liquidation);
         liquidation.liquidated_price = option::some<u64>(liquidated_price);
@@ -479,15 +469,15 @@ module lending_contract::loan {
         let repay_amount = loan.amount + borrower_fee_amount + interest_amount;
         let remain_amount = collateral_swapped_amount - repay_amount;
 
-        assert!(coin::value<T2>(&remaining_fund_to_borrower) == remain_amount, EInvalidCoinInput );
+        assert!(coin::value<T1>(&remaining_fund_to_borrower) == remain_amount, EInvalidCoinInput );
 
-        transfer::public_transfer(remaining_fund_to_borrower, hot_wallet);
+        transfer::public_transfer(remaining_fund_to_borrower, borrower);
 
         loan.status = string::utf8(LIQUIDATED_STATUS);
 
         event::emit(LiquidatedCollateralEvent {
             lender,
-            borrower: loan.borrower,
+            borrower,
             loan_id,
             collateral_swapped_amount,
             status: loan.status,

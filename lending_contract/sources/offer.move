@@ -150,7 +150,6 @@ module lending_contract::offer {
     }
 
     public(friend) fun cancel_offer<T>(
-        version: &Version,
         state: &mut State,
         configuration: &Configuration,
         offer_id: ID,
@@ -158,7 +157,6 @@ module lending_contract::offer {
         waiting_interest: Coin<T>,
         ctx: &mut TxContext,
     ) {
-        version::assert_current_version(version);
         let sender = tx_context::sender(ctx);
         let offer_key = new_offer_key<T>(offer_id);
         assert!(state::contain<OfferKey<T>, Offer<T>>(state, offer_key), ENotFoundOfferToCancel);
