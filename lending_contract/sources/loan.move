@@ -34,14 +34,18 @@ module lending_contract::loan {
     const ENotEnoughBalanceToRepay: u64 = 7;
     const ECanNotRepayExpiredLoan: u64 = 8;
     const ESenderIsInvalid: u64 = 9;
-    const ELendCoinMetadataIsInvalid: u64 = 10;
-    const ECollateralCoinMetadataIsInvalid: u64 = 11;
-    const ECOLLATERALISINSUFFICIENT: u64 = 12;
+    const ELiquidationIsNull: u64 = 10;
+    const EInvalidCoinInput: u64 = 11;
+    const ELendCoinMetadataIsInvalid: u64 = 12;
+    const ECollateralCoinMetadataIsInvalid: u64 = 13;
+    const ECollateralIsInsufficient: u64 = 14;
 
     const MATCHED_STATUS: vector<u8> = b"Matched";
     const FUND_TRANSFERRED_STATUS: vector<u8> = b"FundTransferred";
     const REPAY_STATUS: vector<u8> = b"Repay";
     const BORROWER_PAID_STATUS: vector<u8> = b"BorrowerPaid";
+    const LIQUIDATING_STATUS: vector<u8> = b"Liquidating";
+    const LIQUIDATED_STATUS: vector<u8> = b"Liquidated";
     const FINISHED_STATUS: vector<u8> = b"Finished";
 
     const DEFAULT_RATE_FACTOR: u64 = 10000;
@@ -150,6 +154,23 @@ module lending_contract::loan {
         status: String,
         borrower_fee_percent: u64,
         timestamp: u64,
+    }
+    
+    struct LiquidatingCollateralEvent has copy, drop {
+        loan_id: ID,
+        liquidating_price: u64,
+        liquidating_at: u64,
+    }
+
+    struct LiquidatedCollateralEvent has copy, drop {
+        lender: address,
+        borrower: address,
+        loan_id: ID,
+        collateral_swapped_amount: u64,
+        status: String,
+        liquidated_price: u64,
+        liquidated_tx: String,
+        remaining_fund_to_borrower: u64,
     }
 
     public entry fun take_loan<T1, T2>(
@@ -531,7 +552,7 @@ module lending_contract::loan {
         let sender = tx_context::sender(ctx);
         let collateral_amount = balance::value<T2>(&loan.collateral);
 
-        assert!(collateral_amount >= withdraw_amount, ECOLLATERALISINSUFFICIENT);
+        assert!(collateral_amount >= withdraw_amount, ECollateralIsInsufficient);
 
         let remaining_collateral_amount = collateral_amount - withdraw_amount;
 
@@ -625,5 +646,103 @@ module lending_contract::loan {
             }
         );
 
+    }
+
+    public (friend) fun start_liquidate_loan_offer<T1, T2>(
+        configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
+        liquidating_price: u64,
+        liquidating_at: u64,
+        ctx: &mut TxContext,
+    ) {
+
+        let hot_wallet = configuration::hot_wallet(configuration);
+
+        let loan_key = new_loan_key<T1, T2>(loan_id);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
+        let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
+
+        assert!(loan.status == string::utf8(FUND_TRANSFERRED_STATUS), EInvalidLoanStatus);
+
+        // Update liquidation field
+        if (option::is_none(&loan.liquidation)) {
+            // Initialize the liquidation field if it is None
+            loan.liquidation = option::some<Liquidation<T1, T2>>(Liquidation {
+                liquidating_at,
+                liquidating_price,
+                liquidated_tx: option::none<String>(),
+                liquidated_price: option::none<u64>(),
+            });
+        } else {
+            // Borrow the current liquidation structure and update its fields
+            let liquidation = option::borrow_mut(&mut loan.liquidation);
+            liquidation.liquidating_at = liquidating_at;
+            liquidation.liquidating_price = liquidating_price;
+            // You can also update other fields if necessary
+        };
+
+        let collateral_amount = balance::value<T2>(&loan.collateral);
+        let collateral_balance = sub_collateral_balance<T1, T2>(loan, collateral_amount);
+        let collateral_coin = coin::from_balance<T2>(collateral_balance, ctx);
+        transfer::public_transfer(collateral_coin, hot_wallet);
+
+        loan.status = string::utf8(LIQUIDATING_STATUS);
+
+        event::emit(LiquidatingCollateralEvent {
+            loan_id,
+            liquidating_price,
+            liquidating_at,
+        });
+    }
+
+    public (friend) fun system_liquidate_loan_offer<T1, T2>(
+        configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
+        remaining_fund_to_borrower: Coin<T1>,
+        collateral_swapped_amount: u64,
+        liquidated_price: u64,
+        liquidated_tx: String,
+        ctx: &mut TxContext,
+    ) {
+
+        let loan_key = new_loan_key<T1, T2>(loan_id);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
+        let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
+
+        assert!(loan.status == string::utf8(LIQUIDATING_STATUS), EInvalidLoanStatus);
+        assert!(option::is_some(&loan.liquidation), ELiquidationIsNull );
+
+        let lender = loan.lender;
+        let borrower = loan.borrower;
+        // Borrow the current liquidation structure and update its fields
+        let liquidation = option::borrow_mut(&mut loan.liquidation);
+        liquidation.liquidated_price = option::some<u64>(liquidated_price);
+        liquidation.liquidated_tx = option::some<String>(liquidated_tx);
+        // You can also update other fields if necessary
+        
+        let borrower_fee_percent = configuration::borrower_fee_percent(configuration);
+        let borrower_fee_amount = ((loan.amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
+        let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
+        let repay_amount = loan.amount + borrower_fee_amount + interest_amount;
+        let remain_amount = collateral_swapped_amount - repay_amount;
+
+        assert!(coin::value<T1>(&remaining_fund_to_borrower) == remain_amount, EInvalidCoinInput );
+
+        transfer::public_transfer(remaining_fund_to_borrower, borrower);
+
+        loan.status = string::utf8(LIQUIDATED_STATUS);
+
+        event::emit(LiquidatedCollateralEvent {
+            lender,
+            borrower,
+            loan_id,
+            collateral_swapped_amount,
+            status: loan.status,
+            liquidated_price,
+            liquidated_tx,
+            remaining_fund_to_borrower: remain_amount,
+        });
     }
 }
