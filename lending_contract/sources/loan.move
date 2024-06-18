@@ -512,6 +512,8 @@ module lending_contract::loan {
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
+        version::assert_current_version(version);
+        
         let usdc_name = string::utf8(USDC_NAME);
         let usdc_symbol = string::utf8(USDC_SYMBOL);
         let sui_name = string::utf8(SUI_NAME);
@@ -568,6 +570,8 @@ module lending_contract::loan {
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
+        version::assert_current_version(version);
+        
         let loan_key = new_loan_key<T1, T2>(loan_id);
         assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
         let ( offer_id ) = {
