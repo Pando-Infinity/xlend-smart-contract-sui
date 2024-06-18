@@ -75,7 +75,7 @@ module lending_contract::asset_tier {
         asset_tier.duration
     }
 
-    public fun get_id<T>(
+    public fun id<T>(
         asset_tier: &AssetTier<T>
     ): ID {
         object::id(asset_tier)

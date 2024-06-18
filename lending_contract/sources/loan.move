@@ -24,20 +24,24 @@ module lending_contract::loan {
 
     friend lending_contract::operator;
 
-    const ENotFoundOffer: u64 = 1;
-    const EOfferCanNotBeTakeLoan: u64 = 2;
+    const EOfferNotFound: u64 = 1;
+    const EOffferIsNotActive: u64 = 2;
     const ECollateralNotValidToMinHealthRatio: u64 = 3;
-    const ENotFoundLoan: u64 = 4;
+    const ELoanNotFound: u64 = 4;
     const ESenderIsNotLoanBorrower: u64 = 5;
     const EInvalidLoanStatus: u64 = 6;
     const ENotEnoughBalanceToRepay: u64 = 7;
     const ECanNotRepayExpiredLoan: u64 = 8;
+    const ESenderIsInvalid: u64 = 9;
 
     const MATCHED_STATUS: vector<u8> = b"Matched";
     const FUND_TRANSFERRED_STATUS: vector<u8> = b"FundTransferred";
     const REPAY_STATUS: vector<u8> = b"Repay";
     const BORROWER_PAID_STATUS: vector<u8> = b"BorrowerPaid";
+    const FINISHED_STATUS: vector<u8> = b"Finished";
 
+    const DEFAULT_RATE_FACTOR: u64 = 10000;
+    const SECOND_IN_YEAR: u64 = 31536000;
     struct Liquidation<phantom T1, phantom T2> has store, drop {
         liquidating_at: u64,
         liquidating_price: u64,
@@ -66,7 +70,7 @@ module lending_contract::loan {
         status: String,
     }
 
-    struct FundTransferredEvent has copy, drop {
+    struct RequestLoanEvent has copy, drop {
         loan_id: ID,
         offer_id: ID,
         amount: u64,
@@ -77,6 +81,19 @@ module lending_contract::loan {
         lender: address,
         borrower: address,
         start_timestamp: u64,
+    }
+
+    struct FundTransferredEvent has copy, drop {
+        loan_id: ID,
+        offer_id: ID,
+        amount: u64,
+        duration: u64,
+        // collateral_amount: u64, 
+        lend_token: String,
+        collateral_token: String,
+        lender: address,
+        borrower: address,
+        // start_timestamp: u64,
     }
 
     struct BorrowerPaidEvent has copy, drop {
@@ -102,8 +119,8 @@ module lending_contract::loan {
         state: &mut State,
         offer_id: ID,
         collateral: Coin<T2>,
-        lend_token: String,
-        collateral_token: String,
+        lend_coin_metadata: &CoinMetadata<T1>,
+        collateral_coin_metadata: &CoinMetadata<T2>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -112,9 +129,9 @@ module lending_contract::loan {
         let borrower = tx_context::sender(ctx);
 
         let offer_key = offer::new_offer_key<T1>(offer_id);
-        assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), ENotFoundOffer);
+        assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), EOfferNotFound);
         let offer = state::borrow_mut<OfferKey<T1>, Offer<T1>>(state, offer_key);
-        assert!(offer::can_be_take_loan<T1>(offer), EOfferCanNotBeTakeLoan);
+        assert!(offer::is_available<T1>(offer), EOffferIsNotActive);
         let lender = offer::get_lender<T1>(offer);
         let lend_amount = offer::get_amount<T1>(offer);
         let duration = offer::get_duration<T1>(offer);
@@ -127,14 +144,18 @@ module lending_contract::loan {
         let loan_id = object::id(&loan);
         let loan_key = new_loan_key<T1, T2>(loan_id);
 
-        let receive_balance = offer::sub_offer_balance<T1>(offer, lend_amount);
+
         offer::take_loan(offer);
-        transfer::public_transfer(coin::from_balance<T1>(receive_balance, ctx), borrower);
+
 
         state::add<LoanKey<T1, T2>, Loan<T1,T2>>(state, loan_key, loan);
         state::add_loan(state, loan_id, borrower, ctx);
 
-        event::emit(FundTransferredEvent {
+        let lend_token_ascii = coin::get_symbol<T1>(lend_coin_metadata);
+        let lend_token = string::from_ascii(lend_token_ascii);
+        let collateral_token_ascii = coin::get_symbol<T2>(collateral_coin_metadata);
+        let collateral_token = string::from_ascii(collateral_token_ascii);
+        event::emit(RequestLoanEvent {
             loan_id,
             offer_id,
             amount: lend_amount,
@@ -148,43 +169,54 @@ module lending_contract::loan {
         });
     }
 
-    public entry fun take_loan_crosschain<T>(
+    public entry fun fund_transfer<T1, T2>(
         version: &Version,
-        emitter_cap: &mut EmitterCap,
-        wormhole_state: &mut WormholeState,
-        coin_metadata: &CoinMetadata<T>,
-        collateral_coin: Coin<T>,
-        target_chain: u64,
-        target_address: vector<u8>,
-        tier_id: vector<u8>,
-        offer_id: vector<u8>,
-        pyth_collateral_symbol: vector<u8>,
-        clock: &Clock,
+        configuration: &Configuration,
+        state: &mut State,
+        offer_id: ID,
+        loan_id: ID,
+        lend_coin: Coin<T1>,
+        lend_coin_metadata: &CoinMetadata<T1>,
+        collateral_coin_metadata: &CoinMetadata<T2>,
         ctx: &mut TxContext,
     ) {
-        let collateral_amount = coin::value<T>(&collateral_coin);
-        transfer::public_transfer(collateral_coin, @hot_wallet);
+        version::assert_current_version(version);
 
-        let message_fee_coin = coin::zero<SUI>(ctx);
+        let sender = tx_context::sender(ctx);
+        let hot_wallet = configuration::hot_wallet(configuration);
+        assert!(sender == hot_wallet, ESenderIsInvalid);
 
-        let collateral_decimal = coin::get_decimals<T>(coin_metadata);
-        let payload = gen_take_loan_crosschain_payload(
-            target_chain,
-            target_address,
-            tier_id,
+        let offer_key = offer::new_offer_key<T1>(offer_id);
+        assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), EOfferNotFound);
+        let offer = state::borrow_mut<OfferKey<T1>, Offer<T1>>(state, offer_key);
+
+        let lender = offer::get_lender<T1>(offer);
+        let lend_amount = offer::get_amount<T1>(offer);
+        let duration = offer::get_duration<T1>(offer);
+
+        let loan_key = new_loan_key<T1, T2>(loan_id);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
+        let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
+        assert!(loan.status == string::utf8(MATCHED_STATUS), EInvalidLoanStatus);
+
+        let borrower = loan.borrower;
+        transfer::public_transfer(lend_coin, borrower);
+        loan.status = string::utf8(FUND_TRANSFERRED_STATUS);
+
+        let lend_token_ascii = coin::get_symbol<T1>(lend_coin_metadata);
+        let lend_token = string::from_ascii(lend_token_ascii);
+        let collateral_token_ascii = coin::get_symbol<T2>(collateral_coin_metadata);
+        let collateral_token = string::from_ascii(collateral_token_ascii);
+        event::emit(FundTransferredEvent {
+            loan_id,
             offer_id,
-            collateral_amount,
-            pyth_collateral_symbol,
-            collateral_decimal,
-        );
-
-        wormhole::send_message(
-            emitter_cap,
-            wormhole_state,
-            payload,
-            message_fee_coin,
-            clock,
-        );
+            amount: lend_amount,
+            duration,
+            lend_token,
+            collateral_token,
+            lender,
+            borrower,
+        });
     }
 
     public entry fun repay<T1, T2>(
@@ -194,38 +226,46 @@ module lending_contract::loan {
         state: &mut State,
         loan_id: ID,
         repay_coin: Coin<T1>,
-        lend_token: String,
-        collateral_token: String,
+        lend_coin_metadata: &CoinMetadata<T1>,
+        collateral_coin_metadata: &CoinMetadata<T2>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         version::assert_current_version(version);
         let current_timestamp = clock::timestamp_ms(clock);
         let sender = tx_context::sender(ctx);
+        let hot_wallet = configuration::hot_wallet(configuration); 
         let loan_key = new_loan_key<T1, T2>(loan_id);
-        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ENotFoundLoan);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
         let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
 
         assert!(sender == loan.borrower, ESenderIsNotLoanBorrower);
         assert!(loan.status == string::utf8(FUND_TRANSFERRED_STATUS), EInvalidLoanStatus);
         assert!(loan.start_timestamp + (loan.duration * 1000) > current_timestamp, ECanNotRepayExpiredLoan);
 
+        
         let borrower_fee_percent = configuration::borrower_fee_percent(configuration);
-        let borrower_fee_amount = ((loan.amount * borrower_fee_percent as u128) / 10000 as u64);
-        let interest_amount = ((loan.amount * loan.interest / 10000 * loan.duration as u128) / (24 * 60 * 60 * 365 as u128) as u64);
+        let borrower_fee_amount = ((loan.amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
+        let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
         let repay_amount = loan.amount + borrower_fee_amount + interest_amount;
         assert!(coin::value<T1>(&repay_coin) == repay_amount, ENotEnoughBalanceToRepay);
 
         let repay_balance = coin::into_balance<T1>(repay_coin);
         let borrower_fee_balance = balance::split<T1>(&mut repay_balance, borrower_fee_amount);
-        //TODO: add to hot wallet 
-        add_repay_balance<T1, T2>(loan, repay_balance);
+
+        let coin = coin::from_balance(repay_balance, ctx);
+        transfer::public_transfer(coin, hot_wallet);
         custodian::add_treasury_balance<T1>(custodian, borrower_fee_balance);
 
         let collateral_amount = balance::value<T2>(&loan.collateral);
         let collateral_balance = sub_collateral_balance<T1, T2>(loan, collateral_amount);
         transfer::public_transfer(coin::from_balance(collateral_balance, ctx), sender);
+        loan.status = string::utf8(BORROWER_PAID_STATUS);
 
+        let lend_token_ascii = coin::get_symbol<T1>(lend_coin_metadata);
+        let lend_token = string::from_ascii(lend_token_ascii);
+        let collateral_token_ascii = coin::get_symbol<T2>(collateral_coin_metadata);
+        let collateral_token = string::from_ascii(collateral_token_ascii);
         event::emit(BorrowerPaidEvent {
             loan_id,
             repay_amount,
@@ -241,27 +281,28 @@ module lending_contract::loan {
         custodian: &mut Custodian<T1>,
         state: &mut State, 
         loan_id: ID,
+        repay_coin: Coin<T1>,
         waiting_interest: Coin<T1>,
         ctx: &mut TxContext,
     ) {
         let loan_key = new_loan_key<T1, T2>(loan_id);
-        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ENotFoundLoan);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
         let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
         
         let lender_fee_percent = configuration::lender_fee_percent(configuration);
-        let lender_fee_amount = ((loan.amount * lender_fee_percent as u128) / 10000 as u64);
-        let interest_amount = ((loan.amount * loan.interest / 10000 * loan.duration as u128) / (24 * 60 * 60 * 365 as u128) as u64);
+        let lender_fee_amount = ((loan.amount * lender_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64);
+        let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
         let repay_to_lender_amount = loan.amount + interest_amount - lender_fee_amount;
 
-        assert!(balance::value<T1>(&loan.repay_balance) == repay_to_lender_amount, ENotEnoughBalanceToRepay);
-        let repay_to_lender_balance = sub_repay_balance<T1, T2>(loan, repay_to_lender_amount);
-        let lender_fee_balance = balance::split<T1>(&mut repay_to_lender_balance, lender_fee_amount);
+        assert!(coin::value<T1>(&repay_coin) == repay_to_lender_amount + lender_fee_amount, ENotEnoughBalanceToRepay);
 
-        let repay_to_lender_coin = coin::from_balance<T1>(repay_to_lender_balance, ctx);
-        coin::join<T1>(&mut repay_to_lender_coin, waiting_interest);
+        let lender_fee_coin = coin::split<T1>(&mut repay_coin, lender_fee_amount, ctx);
+        let lender_fee_balance = coin::into_balance<T1>(lender_fee_coin);
+        coin::join<T1>(&mut repay_coin, waiting_interest);
 
-        transfer::public_transfer(repay_to_lender_coin, loan.lender);
+        transfer::public_transfer(repay_coin, loan.lender);
         custodian::add_treasury_balance<T1>(custodian, lender_fee_balance);
+        loan.status = string::utf8(FINISHED_STATUS);
 
         event::emit(FinishedLoanEvent {
             loan_id,
@@ -300,7 +341,7 @@ module lending_contract::loan {
             start_timestamp,
             liquidation: option::none<Liquidation<T1, T2>>(),
             repay_balance: balance::zero<T1>(),
-            status: string::utf8(FUND_TRANSFERRED_STATUS),
+            status: string::utf8(MATCHED_STATUS),
         }
     }
 

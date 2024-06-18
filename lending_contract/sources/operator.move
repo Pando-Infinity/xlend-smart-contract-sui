@@ -12,6 +12,7 @@ module lending_contract::operator {
     use lending_contract::version::{Self, Version};
     use lending_contract::configuration::{Self, Configuration};
     use lending_contract::loan;
+    use lending_contract::offer;
     use lending_contract::custodian::{Self, Custodian};
     use lending_contract::wormhole;
 
@@ -42,12 +43,13 @@ module lending_contract::operator {
     public entry fun init_system<T>(
         _: &OperatorCap,
         version: &Version,
+        hot_wallet: address,
         ctx: &mut TxContext,
     ) {
         version::assert_current_version(version);
 
         custodian::new<T>(ctx);
-        configuration::new(ctx);
+        configuration::new(hot_wallet, ctx);
         state::new(ctx);
     }
 
@@ -108,7 +110,8 @@ module lending_contract::operator {
         configuration: &mut Configuration,
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
-        min_health_ratio: u64, 
+        min_health_ratio: u64,
+        wallet: address,
     ) {
         version::assert_current_version(version);
         configuration::update(
@@ -116,6 +119,28 @@ module lending_contract::operator {
             lender_fee_percent,
             borrower_fee_percent,
             min_health_ratio,
+            wallet,
+        );
+    }
+
+    public entry fun cancel_offer<T>(
+        _: &OperatorCap,
+        version: &Version,
+        state: &mut State,
+        configuration: &Configuration,
+        offer_id: ID,
+        lend_coin: Coin<T>,
+        waiting_interest: Coin<T>,
+        ctx: &mut TxContext,
+    ) {
+        offer::cancel_offer<T>(
+            version,
+            state,
+            configuration,
+            offer_id,
+            lend_coin,
+            waiting_interest,
+            ctx,
         );
     }
 
@@ -126,6 +151,7 @@ module lending_contract::operator {
         custodian: &mut Custodian<T1>,
         state: &mut State, 
         loan_id: ID,
+        repay_coin: Coin<T1>,
         waiting_interest: Coin<T1>,
         ctx: &mut TxContext,
     ) {
@@ -135,6 +161,7 @@ module lending_contract::operator {
             custodian,
             state,
             loan_id,
+            repay_coin,
             waiting_interest,
             ctx,
         );
