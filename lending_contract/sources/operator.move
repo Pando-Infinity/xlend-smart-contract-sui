@@ -116,8 +116,8 @@ module lending_contract::operator {
         waiting_interest: Coin<T>,
         ctx: &mut TxContext,
     ) {
+        version::assert_current_version(version);
         offer::cancel_offer<T>(
-            version,
             state,
             configuration,
             offer_id,
@@ -148,5 +148,51 @@ module lending_contract::operator {
             waiting_interest,
             ctx,
         );
+    }
+
+    public entry fun start_liquidate_loan_offer<T1, T2>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
+        liquidating_price: u64,
+        liquidating_at: u64,
+        ctx: &mut TxContext,
+    ) {
+        version::assert_current_version(version);
+        loan::start_liquidate_loan_offer<T1, T2>(
+            configuration,
+            state,
+            loan_id,
+            liquidating_price,
+            liquidating_at,
+            ctx,
+        )
+    }
+
+    public entry fun system_liquidate_loan_offer<T1, T2>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
+        remaining_fund_to_borrower: Coin<T1>,
+        collateral_swapped_amount: u64,
+        liquidated_price: u64,
+        liquidated_tx: String,
+        ctx: &mut TxContext,
+    ) {
+        version::assert_current_version(version);
+        loan::system_liquidate_loan_offer<T1, T2>(
+            configuration,
+            state,
+            loan_id,
+            remaining_fund_to_borrower,
+            collateral_swapped_amount,
+            liquidated_price,
+            liquidated_tx,
+            ctx,
+        )
     }
 }
