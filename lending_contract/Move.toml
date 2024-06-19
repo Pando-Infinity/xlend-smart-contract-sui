@@ -3,9 +3,25 @@ name = "lending_contract"
 version = "0.0.1"
 published-at=""
 
-[dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet" }
+[dependencies.Pyth]
+git = "https://github.com/pyth-network/pyth-crosschain.git"
+subdir = "target_chains/sui/contracts"
+rev = "sui-contract-testnet"
+ 
+[dependencies.Wormhole]
+git = "https://github.com/wormhole-foundation/wormhole.git"
+subdir = "sui/wormhole"
+rev = "sui-upgrade-testnet"
+ 
+# Pyth is locked into this specific `rev` because the package depends on Wormhole and is pinned to this version.
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "041c5f2bae2fe52079e44b70514333532d69f4e6"
+
 [addresses]
 lending_contract = "0x0"
-admin = "0xfef178223761ae8c347f9fdf6e283f0e04ffa428c7d3c1399f5e225b19094e20"
-operator="0xfef178223761ae8c347f9fdf6e283f0e04ffa428c7d3c1399f5e225b19094e20"
+admin = "0x4836f258cbac78c06040309b9dafa6609e46f1d44dc60e370a3d6330880fb0d1"
+operator="0x4836f258cbac78c06040309b9dafa6609e46f1d44dc60e370a3d6330880fb0d1"
+hot_wallet="0x4836f258cbac78c06040309b9dafa6609e46f1d44dc60e370a3d6330880fb0d1"
+wormhole = "0xf47329f4344f3bf0f8e436e2f7b485466cff300f12a166563995d3888c296a94"

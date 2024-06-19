@@ -12,4 +12,9 @@ export const CUSTODIAN = process.env.CUSTODIAN || "_";
 export const STATE = process.env.STATE || "_";
 export const CONFIGURATION = process.env.CONFIGURATION || "_";
 
+export const TYPE_ARG = process.env.TYPE_ARG || '_';
+
+export const WORMHOLE_STATE = process.env.WORMHOLE_STATE || '_';
+export const WORMHOLE_EMITTER_CAP = process.env.WORMHOLE_EMITTER_CAP || '_';
+
 export const OPERATOR_PRIVATE_KEY = process.env.OPERATOR_PRIVATE_KEY || "_";
