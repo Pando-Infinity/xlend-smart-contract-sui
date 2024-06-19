@@ -27,7 +27,7 @@ module lending_contract::price_feed {
         let time_threshold = configuration::price_time_threshold(configuration);
         let coin_decimals_u8 = coin::get_decimals<T>(coinMetadata);
         // Standardized amount to max decimals
-        let amount_by_max_decimals = amount * utils::power(10, max_decimals) / utils::power(10, (coin_decimals_u8 as u64));
+        let amount_by_max_decimals = (amount as u128) * utils::power(10, max_decimals) / utils::power(10, (coin_decimals_u8 as u64));
 
         let price: Price = get_price_no_older_than(price_info_object, clock, time_threshold);
         let price_u64 = utils::i64_to_u64(&price::get_price(&price));
@@ -36,9 +36,9 @@ module lending_contract::price_feed {
         let value_usd: u128;
 
         if (utils::is_negative(&price::get_expo(&price))) {
-            value_usd = ((price_u64 * amount_by_max_decimals / exponent_power) as u128);
+            value_usd = (price_u64 as u128) * amount_by_max_decimals / exponent_power;
         } else {
-            value_usd = ((price_u64 * amount_by_max_decimals * exponent_power) as u128);
+            value_usd = (price_u64 as u128) * amount_by_max_decimals * exponent_power;
         };
 
         value_usd

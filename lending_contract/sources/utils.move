@@ -5,7 +5,7 @@ module lending_contract::utils {
     friend lending_contract::loan;
     friend lending_contract::price_feed;
 
-    public(friend) fun power(base: u64, exponent: u64): u64 {
+    public(friend) fun power(base: u64, exponent: u64): u128 {
         let result = 1;
         let i = 1;
             
@@ -14,7 +14,7 @@ module lending_contract::utils {
             i = i + 1;
         };
         
-        result
+        (result as u128)
     }
 
     public (friend) fun i64_to_u64(
