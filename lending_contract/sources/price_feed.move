@@ -1,4 +1,5 @@
 module lending_contract::price_feed {
+    use std::debug;
 
     use sui::coin::{Self, Coin, CoinMetadata};
     use sui::clock::{Self, Clock};
@@ -25,24 +26,21 @@ module lending_contract::price_feed {
     ) : u128 {
         let time_threshold = configuration::price_time_threshold(configuration);
         let coin_decimals_u8 = coin::get_decimals<T>(coinMetadata);
-        let sub_decimals = max_decimals - (coin_decimals_u8 as u64);
+        // Standardized amount to max decimals
+        let amount_by_max_decimals = amount * utils::power(10, max_decimals) / utils::power(10, (coin_decimals_u8 as u64));
 
         let price: Price = get_price_no_older_than(price_info_object, clock, time_threshold);
         let price_u64 = utils::i64_to_u64(&price::get_price(&price));
         let exponent_u64 = utils::i64_to_u64(&price::get_expo(&price));
-        let max_decimals_power = utils::power(10, max_decimals);
         let exponent_power = utils::power(10, exponent_u64);
-        let price_usd: u128;
+        let value_usd: u128;
 
         if (utils::is_negative(&price::get_expo(&price))) {
-            price_usd = ((price_u64 * max_decimals_power / exponent_power) as u128);
+            value_usd = ((price_u64 * amount_by_max_decimals / exponent_power) as u128);
         } else {
-            price_usd = ((price_u64 * max_decimals_power * exponent_power) as u128);
+            value_usd = ((price_u64 * amount_by_max_decimals * exponent_power) as u128);
         };
-        
-        let value_usd = price_usd * ((amount * utils::power(10, sub_decimals) / exponent_power) as u128);
 
         value_usd
     }
-
 }

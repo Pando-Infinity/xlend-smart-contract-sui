@@ -34,10 +34,7 @@ module lending_contract::utils {
         price: &I64,
     ): bool {
         let is_negative = i64::get_is_negative(price);
-        if (!is_negative) {
-            false
-        } else {
-            true
-        }
+       
+        is_negative
     }
 }

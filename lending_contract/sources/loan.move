@@ -485,7 +485,7 @@ module lending_contract::loan {
             price_info_object_collateral, 
             clock
         );
-        let lend_price_by_usd = price_feed::get_value_by_usd<T1>(
+        let lend_value_by_usd = price_feed::get_value_by_usd<T1>(
             configuration, 
             max_decimals, 
             lend_amount, 
@@ -494,7 +494,7 @@ module lending_contract::loan {
             price_info_object_lending, 
             clock
         );
-        let current_health_ratio = (collateral_value_by_usd * (DEFAULT_RATE_FACTOR as u128)) / lend_price_by_usd;
+        let current_health_ratio = (collateral_value_by_usd * (DEFAULT_RATE_FACTOR as u128)) / lend_value_by_usd;
         let min_health_ratio = configuration::min_health_ratio(configuration);
 
         current_health_ratio >= (min_health_ratio as u128)
@@ -571,7 +571,7 @@ module lending_contract::loan {
         let collateral_balance = sub_collateral_balance<T1, T2>(loan, withdraw_amount);
         transfer::public_transfer(coin::from_balance(collateral_balance, ctx), sender);
 
-         event::emit(WithdrawCollateralEvent {
+        event::emit(WithdrawCollateralEvent {
             loan_id,
             borrower: loan.borrower,
             withdraw_amount,
