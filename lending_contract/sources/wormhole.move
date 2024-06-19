@@ -1,5 +1,6 @@
 module lending_contract::wormhole {
     use sui::clock::{Clock};
+    use sui::object::{Self, UID};
     use sui::coin::{Coin};
     use sui::transfer::{Self};
     use sui::tx_context::{TxContext};
@@ -12,22 +13,32 @@ module lending_contract::wormhole {
     friend lending_contract::loan_crosschain;
     friend lending_contract::operator;
 
+    struct ProtectedET has key, store {
+        id: UID,
+        emitter_cap: EmitterCap,
+    }
+
     #[allow(lint(share_owned))]
     public(friend) fun init_emitter(
         wormhole_state: &State,
         ctx: &mut TxContext,
     ) {
         let emitter_cap = emitter::new(wormhole_state, ctx); 
-        transfer::public_share_object(emitter_cap);
+        let protectedET = ProtectedET {
+            id: object::new(ctx),
+            emitter_cap,
+        };
+        transfer::public_share_object(protectedET);
     }
 
     public(friend) fun send_message(
-        emitter_cap: &mut EmitterCap,
+        protectedET: &mut ProtectedET,
         wormhole_state: &mut State,
         payload: vector<u8>,
         message_fee: Coin<SUI>,
         clock: &Clock,
     ): u64 {
+        let emitter_cap = &mut protectedET.emitter_cap;
         let message = publish_message::prepare_message(
             emitter_cap,
             0,

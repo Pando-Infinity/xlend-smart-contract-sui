@@ -11,7 +11,7 @@ module lending_contract::loan_crosschain {
     use lending_contract::state::{Self, State};
     use lending_contract::version::{Self, Version};
     use lending_contract::utils;
-    use lending_contract::wormhole;
+    use lending_contract::wormhole::{Self, ProtectedET};
 
     use wormhole::emitter::{EmitterCap};
     use wormhole::state::{State as WormholeState};
@@ -32,7 +32,7 @@ module lending_contract::loan_crosschain {
     public entry fun confirm_collateral_crosschain<T>(
         version: &Version,
         state: &mut State,
-        emitter_cap: &mut EmitterCap,
+        protectedET: &mut ProtectedET,
         wormhole_state: &mut WormholeState,
         coin_metadata: &CoinMetadata<SUI>,
         collateral_coin: Coin<SUI>,
@@ -47,12 +47,15 @@ module lending_contract::loan_crosschain {
         ctx: &mut TxContext,
     ) {
         version::assert_current_version(version);
-        
+
         let borrower = tx_context::sender(ctx);
         let collateral_amount = coin::value<SUI>(&collateral_coin);
         let collateral_holder_key = new_collateral_crosschain_holder_key<T>(
             string::utf8(offer_id)
         );
+
+        //TODO: Validate min health ratio for collateral
+
         let collateral_holder = new_collateral_crosschain_holder<T>(
             string::utf8(offer_id),
             lend_amount,
@@ -81,7 +84,7 @@ module lending_contract::loan_crosschain {
         );
 
         wormhole::send_message(
-            emitter_cap,
+            protectedET,
             wormhole_state,
             payload,
             message_fee_coin,
