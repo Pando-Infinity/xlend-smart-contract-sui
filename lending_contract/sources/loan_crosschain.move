@@ -11,7 +11,7 @@ module lending_contract::loan_crosschain {
     use lending_contract::state::{Self, State};
     use lending_contract::version::{Self, Version};
     use lending_contract::utils;
-    use lending_contract::wormhole::{Self, ProtectedET};
+    use lending_contract::wormhole::{Self, ProtectedEC};
 
     use wormhole::emitter::{EmitterCap};
     use wormhole::state::{State as WormholeState};
@@ -32,8 +32,9 @@ module lending_contract::loan_crosschain {
     public entry fun confirm_collateral_crosschain<T>(
         version: &Version,
         state: &mut State,
-        protectedET: &mut ProtectedET,
+        protected_ec: &mut ProtectedEC,
         wormhole_state: &mut WormholeState,
+        message_fee: Coin<SUI>,
         coin_metadata: &CoinMetadata<SUI>,
         collateral_coin: Coin<SUI>,
         pyth_collateral_symbol: vector<u8>,
@@ -71,7 +72,6 @@ module lending_contract::loan_crosschain {
             collateral_holder,
         );
 
-        let message_fee_coin = coin::zero<SUI>(ctx);
         let collateral_decimal = coin::get_decimals<SUI>(coin_metadata);
         let payload = gen_confirm_collateral_crosschain_payload(
             target_chain,
@@ -84,10 +84,10 @@ module lending_contract::loan_crosschain {
         );
 
         wormhole::send_message(
-            protectedET,
+            protected_ec,
             wormhole_state,
             payload,
-            message_fee_coin,
+            message_fee,
             clock,
         );
     }

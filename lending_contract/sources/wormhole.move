@@ -13,7 +13,7 @@ module lending_contract::wormhole {
     friend lending_contract::loan_crosschain;
     friend lending_contract::operator;
 
-    struct ProtectedET has key, store {
+    struct ProtectedEC has key, store {
         id: UID,
         emitter_cap: EmitterCap,
     }
@@ -24,21 +24,21 @@ module lending_contract::wormhole {
         ctx: &mut TxContext,
     ) {
         let emitter_cap = emitter::new(wormhole_state, ctx); 
-        let protectedET = ProtectedET {
+        let protected_ec = ProtectedEC {
             id: object::new(ctx),
             emitter_cap,
         };
-        transfer::public_share_object(protectedET);
+        transfer::public_share_object(protected_ec);
     }
 
     public(friend) fun send_message(
-        protectedET: &mut ProtectedET,
+        protected_ec: &mut ProtectedEC,
         wormhole_state: &mut State,
         payload: vector<u8>,
         message_fee: Coin<SUI>,
         clock: &Clock,
     ): u64 {
-        let emitter_cap = &mut protectedET.emitter_cap;
+        let emitter_cap = &mut protected_ec.emitter_cap;
         let message = publish_message::prepare_message(
             emitter_cap,
             0,
