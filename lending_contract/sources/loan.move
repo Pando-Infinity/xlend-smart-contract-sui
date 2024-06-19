@@ -556,7 +556,7 @@ module lending_contract::loan {
 
         let remaining_collateral_amount = collateral_amount - withdraw_amount;
 
-        assert!(is_valid_collateral_amount(
+        assert!(is_valid_collateral_amount<T1, T2>(
             configuration, 
             lend_amount, 
             remaining_collateral_amount, 
