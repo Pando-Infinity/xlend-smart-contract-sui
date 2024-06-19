@@ -9,11 +9,19 @@ module lending_contract::loan {
     use std::string::{Self, String};
     use std::option::{Self, Option};
 
+    use pyth::price_info::PriceInfoObject;
+    use pyth::state::{State as PythState};
+    use pyth::i64::{Self, I64};
+    use pyth::pyth::{get_price_no_older_than};
+    use pyth::price::{Self, Price};
+
     use lending_contract::offer::{Self, Offer, OfferKey};
     use lending_contract::state::{Self, State};
     use lending_contract::configuration::{Self, Configuration};
     use lending_contract::custodian::{Self, Custodian};
     use lending_contract::version::{Self, Version};
+    use lending_contract::price_feed;
+    use lending_contract::utils;
 
     friend lending_contract::operator;
 
@@ -28,6 +36,9 @@ module lending_contract::loan {
     const ESenderIsInvalid: u64 = 9;
     const ELiquidationIsNull: u64 = 10;
     const EInvalidCoinInput: u64 = 11;
+    const ELendCoinMetadataIsInvalid: u64 = 12;
+    const ECollateralCoinMetadataIsInvalid: u64 = 13;
+    const ECollateralIsInsufficient: u64 = 14;
 
     const MATCHED_STATUS: vector<u8> = b"Matched";
     const FUND_TRANSFERRED_STATUS: vector<u8> = b"FundTransferred";
@@ -39,6 +50,15 @@ module lending_contract::loan {
 
     const DEFAULT_RATE_FACTOR: u64 = 10000;
     const SECOND_IN_YEAR: u64 = 31536000;
+
+    const SUI_DECIMALS: u8 = 9; 
+    const SUI_NAME: vector<u8> = b"Sui"; 
+    const SUI_SYMBOL: vector<u8> = b"SUI";
+    
+    const USDC_DECIMALS: u8 = 6; 
+    const USDC_NAME: vector<u8> = b"USDC"; 
+    const USDC_SYMBOL: vector<u8> = b"USDC"; 
+
     struct Liquidation<phantom T1, phantom T2> has store, drop {
         liquidating_at: u64,
         liquidating_price: u64,
@@ -110,6 +130,32 @@ module lending_contract::loan {
         borrower: address,
     }
 
+    struct WithdrawCollateralEvent has copy, drop {
+        loan_id: ID,
+        borrower: address,
+        withdraw_amount: u64,
+        remaining_collateral_amount: u64,
+        timestamp: u64,
+    }
+
+    struct DepositCollateralEvent has copy, drop {
+        tier_id: ID,
+        lend_offer_id: ID,
+        interest: u64,
+        borrow_amount: u64,
+        lender_fee_percent: u64,
+        duration: u64,
+        lend_mint_token: String,
+        lender: address,
+        loan_offer_id: ID,
+        borrower: address,
+        collateral_mint_token: String,
+        collateral_amount: u64,
+        status: String,
+        borrower_fee_percent: u64,
+        timestamp: u64,
+    }
+    
     struct LiquidatingCollateralEvent has copy, drop {
         loan_id: ID,
         liquidating_price: u64,
@@ -135,10 +181,22 @@ module lending_contract::loan {
         collateral: Coin<T2>,
         lend_coin_metadata: &CoinMetadata<T1>,
         collateral_coin_metadata: &CoinMetadata<T2>,
+        pyth_state: &PythState,
+        price_info_object_collateral: &PriceInfoObject,
+        price_info_object_lending: &PriceInfoObject,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         version::assert_current_version(version);
+
+        let usdc_name = string::utf8(USDC_NAME);
+        let usdc_symbol = string::utf8(USDC_SYMBOL);
+        let sui_name = string::utf8(SUI_NAME);
+        let sui_symbol = string::utf8(SUI_SYMBOL);
+
+        assert!(is_valid_coinmetadata<T1>(lend_coin_metadata, usdc_name, USDC_DECIMALS, usdc_symbol), ELendCoinMetadataIsInvalid);
+        assert!(is_valid_coinmetadata<T2>(collateral_coin_metadata, sui_name, SUI_DECIMALS, sui_symbol), ECollateralCoinMetadataIsInvalid);
+
         let current_timestamp = clock::timestamp_ms(clock);
         let borrower = tx_context::sender(ctx);
 
@@ -152,7 +210,17 @@ module lending_contract::loan {
 
         let collateral_amount = coin::value<T2>(&collateral);
     
-        assert!(is_valid_collateral(configuration, lend_amount, collateral_amount), ECollateralNotValidToMinHealthRatio);
+        assert!(is_valid_collateral_amount<T1, T2>(
+            configuration, 
+            lend_amount, 
+            collateral_amount, 
+            lend_coin_metadata, 
+            collateral_coin_metadata, 
+            pyth_state, 
+            price_info_object_lending, 
+            price_info_object_collateral, 
+            clock,
+        ), ECollateralNotValidToMinHealthRatio);
 
         let loan = new_loan<T1, T2>(offer, collateral, lender, borrower, current_timestamp, ctx);
         let loan_id = object::id(&loan);
@@ -366,6 +434,13 @@ module lending_contract::loan {
         balance::join<T1>(&mut loan.repay_balance, repay_balance);
     }
 
+    fun add_collateral_balance<T1, T2>(
+        loan: &mut Loan<T1, T2>,
+        deposit_balance: Balance<T2>
+    ) {
+        balance::join<T2>(&mut loan.collateral, deposit_balance);
+    }
+
     fun sub_repay_balance<T1, T2>(
         loan: &mut Loan<T1, T2>,
         amount: u64,
@@ -380,13 +455,197 @@ module lending_contract::loan {
         balance::split<T2>(&mut loan.collateral, amount)
     }
 
-    fun is_valid_collateral(
+    fun is_valid_collateral_amount<T1, T2>(
         configuration: &Configuration,
         lend_amount: u64,
         collateral_amount: u64,
+        lend_coin_metadata: &CoinMetadata<T1>,
+        collateral_coin_metadata: &CoinMetadata<T2>,
+        pyth_state: &PythState,
+        price_info_object_lending: &PriceInfoObject,
+        price_info_object_collateral: &PriceInfoObject,
+        clock: &Clock,
     ): bool {
-        //TODO: use price feeds getting price lend token price and collateral token price to check health ratio
-        true
+        let lend_decimals = coin::get_decimals<T1>(lend_coin_metadata);
+        let collateral_decimals = coin::get_decimals<T2>(collateral_coin_metadata);
+        let max_decimals: u64;
+
+        if (lend_decimals > collateral_decimals) {
+            max_decimals = (lend_decimals as u64);
+        } else  {
+            max_decimals = (collateral_decimals as u64);
+        };
+
+        let collateral_value_by_usd = price_feed::get_value_by_usd<T2>(
+            configuration, 
+            max_decimals, 
+            collateral_amount, 
+            collateral_coin_metadata, 
+            pyth_state, 
+            price_info_object_collateral, 
+            clock
+        );
+        let lend_value_by_usd = price_feed::get_value_by_usd<T1>(
+            configuration, 
+            max_decimals, 
+            lend_amount, 
+            lend_coin_metadata, 
+            pyth_state, 
+            price_info_object_lending, 
+            clock
+        );
+        let current_health_ratio = (collateral_value_by_usd * (DEFAULT_RATE_FACTOR as u128)) / lend_value_by_usd;
+        let min_health_ratio = configuration::min_health_ratio(configuration);
+
+        current_health_ratio >= (min_health_ratio as u128)
+    }
+
+    fun is_valid_coinmetadata<T>(
+        coinMetadata: &CoinMetadata<T>,
+        validated_name: String,
+        validated_decimals: u8,
+        validated_symbol: String,
+    ): bool {
+        let coin_decimals = coin::get_decimals<T>(coinMetadata);
+        let coin_name = coin::get_name<T>(coinMetadata);
+
+        let coin_symbol_ascii = coin::get_symbol<T>(coinMetadata);
+        let coin_symbol = string::from_ascii(coin_symbol_ascii);
+
+        if (coin_name == validated_name && coin_decimals == validated_decimals && coin_symbol == validated_symbol) {
+            true
+        } else {
+            false
+        }
+    }
+
+     public entry fun withdraw_collateral_loan_offer<T1, T2>(
+        version: &Version,
+        configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
+        withdraw_amount: u64,
+        lend_coin_metadata: &CoinMetadata<T1>,
+        collateral_coin_metadata: &CoinMetadata<T2>,
+        pyth_state: &PythState,
+        price_info_object_lending: &PriceInfoObject,
+        price_info_object_collateral: &PriceInfoObject,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        version::assert_current_version(version);
+        
+        let usdc_name = string::utf8(USDC_NAME);
+        let usdc_symbol = string::utf8(USDC_SYMBOL);
+        let sui_name = string::utf8(SUI_NAME);
+        let sui_symbol = string::utf8(SUI_SYMBOL);
+
+        let loan_key = new_loan_key<T1, T2>(loan_id);
+        let current_timestamp = clock::timestamp_ms(clock);
+        let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
+
+        assert!(loan.status == string::utf8(FUND_TRANSFERRED_STATUS), EInvalidLoanStatus);
+        
+        let offer_id = loan.offer_id;
+        let lend_amount = loan.amount;
+
+        let sender = tx_context::sender(ctx);
+        let collateral_amount = balance::value<T2>(&loan.collateral);
+
+        assert!(collateral_amount >= withdraw_amount, ECollateralIsInsufficient);
+
+        let remaining_collateral_amount = collateral_amount - withdraw_amount;
+
+        assert!(is_valid_collateral_amount<T1, T2>(
+            configuration, 
+            lend_amount, 
+            remaining_collateral_amount, 
+            lend_coin_metadata, 
+            collateral_coin_metadata, 
+            pyth_state, 
+            price_info_object_lending, 
+            price_info_object_collateral, 
+            clock, 
+        ), ECollateralNotValidToMinHealthRatio);
+
+        let collateral_balance = sub_collateral_balance<T1, T2>(loan, withdraw_amount);
+        transfer::public_transfer(coin::from_balance(collateral_balance, ctx), sender);
+
+        event::emit(WithdrawCollateralEvent {
+            loan_id,
+            borrower: loan.borrower,
+            withdraw_amount,
+            remaining_collateral_amount,
+            timestamp: current_timestamp,
+        });
+    }
+
+    public entry fun deposit_collateral_loan_offer<T1, T2>(
+        version: &Version,
+        configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
+        deposit_amount: Coin<T2>,
+        lend_coin_metadata: &CoinMetadata<T1>,
+        collateral_coin_metadata: &CoinMetadata<T2>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        version::assert_current_version(version);
+        
+        let loan_key = new_loan_key<T1, T2>(loan_id);
+        assert!(state::contain<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key), ELoanNotFound);
+        let ( offer_id ) = {
+            let loan = state::borrow<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
+            loan.offer_id 
+        };
+
+        let ( asset_tier ) = {
+            let offer_key = offer::new_offer_key<T1>(offer_id);
+            assert!(state::contain<OfferKey<T1>, Offer<T1>>(state, offer_key), EOfferNotFound);
+            let offer = state::borrow<OfferKey<T1>, Offer<T1>>(state, offer_key);
+            offer::get_asset_tier(offer)
+        };
+
+        let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
+
+        let lend_fee_percentage = configuration::lender_fee_percent(configuration);
+        let borrow_fee_percentage = configuration::borrower_fee_percent(configuration);
+
+        let lend_token_ascii = coin::get_symbol<T1>(lend_coin_metadata);
+        let lend_token = string::from_ascii(lend_token_ascii);
+        let collateral_token_ascii = coin::get_symbol<T2>(collateral_coin_metadata);
+        let collateral_token = string::from_ascii(collateral_token_ascii);
+
+        let current_timestamp = clock::timestamp_ms(clock);
+        assert!(loan.status == string::utf8(FUND_TRANSFERRED_STATUS), EInvalidLoanStatus);
+
+        let deposit_amount_value = coin::value<T2>(&deposit_amount);
+        let deposit_balance = coin::into_balance<T2>(deposit_amount);
+
+        add_collateral_balance<T1, T2>(loan, deposit_balance);
+
+        let total_collateral_amount = balance::value<T2>(&loan.collateral);
+
+        event::emit(DepositCollateralEvent {
+            tier_id: asset_tier,
+            lend_offer_id: loan.offer_id,
+            interest: loan.interest,
+            borrow_amount: loan.amount,
+            lender_fee_percent: lend_fee_percentage,
+            duration: loan.duration,
+            lend_mint_token: lend_token,
+            lender: loan.lender,
+            loan_offer_id: loan_id,
+            borrower: loan.borrower,
+            collateral_mint_token: collateral_token,
+            collateral_amount: total_collateral_amount,
+            status: loan.status,
+            borrower_fee_percent: borrow_fee_percentage,
+            timestamp: current_timestamp,
+            }
+        );
+
     }
 
     public (friend) fun start_liquidate_loan_offer<T1, T2>(

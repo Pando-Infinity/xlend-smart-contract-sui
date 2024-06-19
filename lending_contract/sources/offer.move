@@ -263,6 +263,12 @@ module lending_contract::offer {
         offer.lender
     }
 
+    public fun get_asset_tier<T>(
+        offer: &Offer<T>
+    ): ID {
+        offer.asset_tier
+    }
+
     fun new_offer<T>(
         asset_tier: ID,
         lend_amount: u64,
