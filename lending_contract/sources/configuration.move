@@ -2,10 +2,17 @@ module lending_contract::configuration {
     use sui::tx_context::TxContext;
     use sui::object::{Self, UID};
     use sui::transfer;
+    use sui::table::{Self, Table};
+    use std::string::{Self, String};
+    use sui::event;
 
     friend lending_contract::admin;
     friend lending_contract::operator;
     friend lending_contract::price_feed;
+
+    struct PriceFeedObject has store {
+        price_feed_id: String,
+    }
 
     struct Configuration has key, store {
         id: UID,
@@ -14,6 +21,7 @@ module lending_contract::configuration {
         min_health_ratio: u64,
         hot_wallet: address,
         price_time_threshold: u64,
+        price_id:  Table<String, PriceFeedObject>
     }
 
     public(friend) fun new(
@@ -27,6 +35,7 @@ module lending_contract::configuration {
             min_health_ratio: 0,
             hot_wallet: wallet,
             price_time_threshold: 60,
+            price_id: table::new<String, PriceFeedObject>(ctx),
         };
         transfer::share_object(configuration);
     }
@@ -74,5 +83,23 @@ module lending_contract::configuration {
         configuration: &Configuration
     ): u64 {
         configuration.price_time_threshold
+    }
+    
+    public(friend) fun add_price_id(
+        configuration: &mut Configuration,
+        coin_metadata: String,
+        price_feed_id: String,
+    ) {
+        let price_feed_object = PriceFeedObject {
+            price_feed_id: price_feed_id,
+        };
+        table::add<String, PriceFeedObject>(&mut configuration.price_id, coin_metadata, price_feed_object);
+    }
+
+    public(friend) fun borrow(
+        configuration: &Configuration,
+        coin_metadata: String
+    ): &PriceFeedObject {
+         table::borrow<String, PriceFeedObject>(&configuration.price_id, coin_metadata)
     }
 }
