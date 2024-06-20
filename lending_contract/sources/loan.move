@@ -8,16 +8,18 @@ module lending_contract::loan {
     use sui::transfer;
     use std::string::{Self, String};
     use std::option::{Self, Option};
+    use std::debug;
 
-    use pyth::price_info::PriceInfoObject;
+    use pyth::price_info::{Self, PriceInfoObject};
     use pyth::state::{State as PythState};
     use pyth::i64::{Self, I64};
     use pyth::pyth::{get_price_no_older_than};
     use pyth::price::{Self, Price};
+    use pyth::price_identifier::{Self, PriceIdentifier};
 
     use lending_contract::offer::{Self, Offer, OfferKey};
     use lending_contract::state::{Self, State};
-    use lending_contract::configuration::{Self, Configuration};
+    use lending_contract::configuration::{Self, Configuration, PriceFeedObject};
     use lending_contract::custodian::{Self, Custodian};
     use lending_contract::version::{Self, Version};
     use lending_contract::price_feed;
@@ -173,6 +175,11 @@ module lending_contract::loan {
         remaining_fund_to_borrower: u64,
     }
 
+    struct TestEvent has copy, drop {
+        price_id_1: vector<u8>,
+        price_id_2: vector<u8>,
+    }
+
     public entry fun take_loan<T1, T2>(
         version: &Version,
         configuration: &Configuration,
@@ -194,8 +201,8 @@ module lending_contract::loan {
         let sui_name = string::utf8(SUI_NAME);
         let sui_symbol = string::utf8(SUI_SYMBOL);
 
-        assert!(is_valid_coinmetadata<T1>(lend_coin_metadata, usdc_name, USDC_DECIMALS, usdc_symbol), ELendCoinMetadataIsInvalid);
-        assert!(is_valid_coinmetadata<T2>(collateral_coin_metadata, sui_name, SUI_DECIMALS, sui_symbol), ECollateralCoinMetadataIsInvalid);
+        assert!(is_valid_price_id<T1>(configuration, lend_coin_metadata, price_info_object_lending), ELendCoinMetadataIsInvalid);
+        assert!(is_valid_price_id<T2>(configuration, collateral_coin_metadata, price_info_object_collateral), ECollateralCoinMetadataIsInvalid);
 
         let current_timestamp = clock::timestamp_ms(clock);
         let borrower = tx_context::sender(ctx);
@@ -500,23 +507,29 @@ module lending_contract::loan {
         current_health_ratio >= (min_health_ratio as u128)
     }
 
-    fun is_valid_coinmetadata<T>(
+    public entry fun is_valid_price_id<T>(
+        configuration: &Configuration,
         coinMetadata: &CoinMetadata<T>,
-        validated_name: String,
-        validated_decimals: u8,
-        validated_symbol: String,
+        price_info_object: &PriceInfoObject,
     ): bool {
-        let coin_decimals = coin::get_decimals<T>(coinMetadata);
+        let price_info = price_info::get_price_info_from_price_info_object(price_info_object);
+        let price_id = price_identifier::get_bytes(&price_info::get_price_identifier(&price_info));
+        
         let coin_name = coin::get_name<T>(coinMetadata);
+        let price_id_by_coinmetadata = configuration::borrow(configuration, coin_name);
 
-        let coin_symbol_ascii = coin::get_symbol<T>(coinMetadata);
-        let coin_symbol = string::from_ascii(coin_symbol_ascii);
+        let price_feed_id = configuration::price_feed_id(configuration, coin_name);
+        let price_id_length = string::length(&price_feed_id);
+        let price_feed_id_validate = string::sub_string(&price_feed_id, 2, price_id_length);
+        let price_feed_id_bytes_ref = string::bytes(&price_feed_id_validate);
+        let price_feed_id_bytes = *price_feed_id_bytes_ref;
 
-        if (coin_name == validated_name && coin_decimals == validated_decimals && coin_symbol == validated_symbol) {
-            true
-        } else {
-            false
-        }
+        event::emit(TestEvent {
+            price_id_1: price_id,
+            price_id_2: price_feed_id_validate,
+        });
+
+        price_id == price_feed_id_bytes
     }
 
      public entry fun withdraw_collateral_loan_offer<T1, T2>(

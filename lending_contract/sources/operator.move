@@ -108,6 +108,21 @@ module lending_contract::operator {
         );
     }
 
+    public entry fun add_price_id(
+        version: &Version,
+        _: &OperatorCap,
+        configuration: &mut Configuration,
+        coin_metadata: String,
+        price_feed_id: String,
+    ) {
+        version::assert_current_version(version);
+        configuration::add_price_id(
+            configuration,
+            coin_metadata,
+            price_feed_id,
+        )
+    }
+
     public entry fun cancel_offer<T>(
         _: &OperatorCap,
         version: &Version,
