@@ -11,6 +11,13 @@ module lending_contract::configuration {
     friend lending_contract::price_feed;
     friend lending_contract::loan;
 
+    const EKeyAlreadyExisted: u64 = 1;
+    const EKeyIsNotExisted: u64 = 2;
+
+    struct PriceFeedObject has store, drop {
+        price_feed_id: String,
+    }
+
     struct Configuration has key, store {
         id: UID,
         lender_fee_percent: u64,
@@ -18,11 +25,7 @@ module lending_contract::configuration {
         min_health_ratio: u64,
         hot_wallet: address,
         price_time_threshold: u64,
-        price_id: Table<String, PriceFeedObject>,
-    }
-
-    struct PriceFeedObject has store {
-        price_feed_id: String,
+        price_feed_ids:  Table<String, PriceFeedObject>,
     }
 
     public(friend) fun new(
@@ -36,7 +39,7 @@ module lending_contract::configuration {
             min_health_ratio: 0,
             hot_wallet: wallet,
             price_time_threshold: 60,
-            price_id: table::new<String, PriceFeedObject>(ctx),
+            price_feed_ids: table::new<String, PriceFeedObject>(ctx),
         };
         transfer::share_object(configuration);
     }
@@ -85,30 +88,49 @@ module lending_contract::configuration {
     ): u64 {
         configuration.price_time_threshold
     }
-
+    
     public(friend) fun add_price_id(
         configuration: &mut Configuration,
-        coin_metadata: String,
+        coin_symbol: String,
         price_feed_id: String,
     ) {
+        assert!(!table::contains<String, PriceFeedObject>(&configuration.price_feed_ids, coin_symbol), EKeyAlreadyExisted);
         let price_feed_object = PriceFeedObject {
             price_feed_id: price_feed_id,
         };
-        table::add<String, PriceFeedObject>(&mut configuration.price_id, coin_metadata, price_feed_object);
+        table::add<String, PriceFeedObject>(&mut configuration.price_feed_ids, coin_symbol, price_feed_object);
     }
 
-    public(friend) fun borrow(
+    public(friend) fun update_price_id(
+        configuration: &mut Configuration,
+        coin_symbol: String,
+        price_feed_id: String,
+    ) {
+        assert!(table::contains<String, PriceFeedObject>(&configuration.price_feed_ids, coin_symbol), EKeyIsNotExisted);
+        let price_feed_object = table::borrow_mut<String, PriceFeedObject>(&mut configuration.price_feed_ids, coin_symbol);
+        price_feed_object.price_feed_id = price_feed_id;
+    }
+
+    public(friend) fun remove_price_id(
+        configuration: &mut Configuration,
+        coin_symbol: String,
+    ) {
+        assert!(table::contains<String, PriceFeedObject>(&configuration.price_feed_ids, coin_symbol), EKeyIsNotExisted);
+        let price_feed_object = table::remove<String, PriceFeedObject>(&mut configuration.price_feed_ids, coin_symbol);
+    }
+
+    public(friend) fun get_price_id_by_coin(
         configuration: &Configuration,
-        coin_metadata: String,
+        coin_symbol: String
     ): &PriceFeedObject {
-        table::borrow<String, PriceFeedObject>(&configuration.price_id, coin_metadata)
+         table::borrow<String, PriceFeedObject>(&configuration.price_feed_ids, coin_symbol)
     }
 
     public(friend) fun price_feed_id(
         configuration: &Configuration,
-        coin_metadata: String,
+        coin_symbol: String,
     ): String {
-        let object = table::borrow<String, PriceFeedObject>(&configuration.price_id, coin_metadata);
-        object.price_feed_id
+        let price_feed_object = table::borrow<String, PriceFeedObject>(&configuration.price_feed_ids, coin_symbol);
+        price_feed_object.price_feed_id
     }
 }

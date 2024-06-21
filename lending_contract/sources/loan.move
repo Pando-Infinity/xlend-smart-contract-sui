@@ -38,8 +38,8 @@ module lending_contract::loan {
     const ESenderIsInvalid: u64 = 9;
     const ELiquidationIsNull: u64 = 10;
     const EInvalidCoinInput: u64 = 11;
-    const ELendCoinMetadataIsInvalid: u64 = 12;
-    const ECollateralCoinMetadataIsInvalid: u64 = 13;
+    const EPriceInfoObjectLendingIsInvalid: u64 = 12;
+    const EPriceInfoObjectCollateralIsInvalid: u64 = 13;
     const ECollateralIsInsufficient: u64 = 14;
 
     const MATCHED_STATUS: vector<u8> = b"Matched";
@@ -175,11 +175,6 @@ module lending_contract::loan {
         remaining_fund_to_borrower: u64,
     }
 
-    struct TestEvent has copy, drop {
-        price_id_1: vector<u8>,
-        price_id_2: vector<u8>,
-    }
-
     public entry fun take_loan<T1, T2>(
         version: &Version,
         configuration: &Configuration,
@@ -201,8 +196,8 @@ module lending_contract::loan {
         let sui_name = string::utf8(SUI_NAME);
         let sui_symbol = string::utf8(SUI_SYMBOL);
 
-        assert!(is_valid_price_id<T1>(configuration, lend_coin_metadata, price_info_object_lending), ELendCoinMetadataIsInvalid);
-        assert!(is_valid_price_id<T2>(configuration, collateral_coin_metadata, price_info_object_collateral), ECollateralCoinMetadataIsInvalid);
+        assert!(is_valid_price_id<T1>(configuration, lend_coin_metadata, price_info_object_lending), EPriceInfoObjectLendingIsInvalid);
+        assert!(is_valid_price_id<T2>(configuration, collateral_coin_metadata, price_info_object_collateral), EPriceInfoObjectCollateralIsInvalid);
 
         let current_timestamp = clock::timestamp_ms(clock);
         let borrower = tx_context::sender(ctx);
@@ -514,22 +509,13 @@ module lending_contract::loan {
     ): bool {
         let price_info = price_info::get_price_info_from_price_info_object(price_info_object);
         let price_id = price_identifier::get_bytes(&price_info::get_price_identifier(&price_info));
+        let price_id_validate = utils::vector_to_hex_char(price_id);
         
-        let coin_name = coin::get_name<T>(coinMetadata);
-        let price_id_by_coinmetadata = configuration::borrow(configuration, coin_name);
+        let coin_symbol_ascii = coin::get_symbol<T>(coinMetadata);
+        let coin_symbol = string::from_ascii(coin_symbol_ascii);
+        let price_feed_id = configuration::price_feed_id(configuration, coin_symbol);
 
-        let price_feed_id = configuration::price_feed_id(configuration, coin_name);
-        let price_id_length = string::length(&price_feed_id);
-        let price_feed_id_validate = string::sub_string(&price_feed_id, 2, price_id_length);
-        let price_feed_id_bytes_ref = string::bytes(&price_feed_id_validate);
-        let price_feed_id_bytes = *price_feed_id_bytes_ref;
-
-        event::emit(TestEvent {
-            price_id_1: price_id,
-            price_id_2: price_feed_id_validate,
-        });
-
-        price_id == price_feed_id_bytes
+        price_id_validate == price_feed_id
     }
 
      public entry fun withdraw_collateral_loan_offer<T1, T2>(
