@@ -1,6 +1,6 @@
 module lending_contract::configuration {
     use sui::tx_context::TxContext;
-    use sui::object::{Self, UID, ID};
+    use sui::object::{Self, UID};
     use sui::transfer;
     use sui::table::{Self, Table};
     use std::string::{Self, String};
@@ -14,7 +14,7 @@ module lending_contract::configuration {
     const EKeyIsNotExisted: u64 = 2;
 
     struct PriceFeedObject has store, drop {
-        price_feed_id: ID,
+        price_feed_id: String,
     }
 
     struct Configuration has key, store {
@@ -91,7 +91,7 @@ module lending_contract::configuration {
     public(friend) fun add_price_id(
         configuration: &mut Configuration,
         coin_symbol: String,
-        price_feed_id: ID,
+        price_feed_id: String,
     ) {
         assert!(!table::contains<String, PriceFeedObject>(&configuration.price_feed_ids, coin_symbol), EKeyAlreadyExisted);
         let price_feed_object = PriceFeedObject {
@@ -103,7 +103,7 @@ module lending_contract::configuration {
     public(friend) fun update_price_id(
         configuration: &mut Configuration,
         coin_symbol: String,
-        price_feed_id: ID,
+        price_feed_id: String,
     ) {
         assert!(table::contains<String, PriceFeedObject>(&configuration.price_feed_ids, coin_symbol), EKeyIsNotExisted);
         let price_feed_object = table::borrow_mut<String, PriceFeedObject>(&mut configuration.price_feed_ids, coin_symbol);

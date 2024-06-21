@@ -113,7 +113,7 @@ module lending_contract::operator {
         _: &OperatorCap,
         configuration: &mut Configuration,
         coin_symbol: String,
-        price_feed_id: ID,
+        price_feed_id: String,
     ) {
         version::assert_current_version(version);
         configuration::add_price_id(
@@ -128,7 +128,7 @@ module lending_contract::operator {
         _: &OperatorCap,
         configuration: &mut Configuration,
         coin_symbol: String,
-        price_feed_id: ID,
+        price_feed_id: String,
     ) {
         version::assert_current_version(version);
         configuration::update_price_id(
