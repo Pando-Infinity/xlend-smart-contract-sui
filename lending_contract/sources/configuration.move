@@ -124,4 +124,12 @@ module lending_contract::configuration {
     ): &PriceFeedObject {
          table::borrow<String, PriceFeedObject>(&configuration.price_feed_ids, coin_symbol)
     }
+
+    public(friend) fun price_feed_id(
+        configuration: &Configuration,
+        coin_symbol: String,
+    ): String {
+        let price_feed_object = table::borrow<String, PriceFeedObject>(&configuration.price_feed_ids, coin_symbol);
+        price_feed_object.price_feed_id
+    }
 }
