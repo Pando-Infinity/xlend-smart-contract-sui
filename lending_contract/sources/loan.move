@@ -502,7 +502,7 @@ module lending_contract::loan {
         current_health_ratio >= (min_health_ratio as u128)
     }
 
-    public entry fun is_valid_price_id<T>(
+    fun is_valid_price_id<T>(
         configuration: &Configuration,
         coinMetadata: &CoinMetadata<T>,
         price_info_object: &PriceInfoObject,
