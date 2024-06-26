@@ -18,13 +18,6 @@ module lending_contract::configuration {
         price_feed_id: String,
     }
 
-    const EKeyAlreadyExisted: u64 = 1;
-    const EKeyIsNotExisted: u64 = 2;
-
-    struct PriceFeedObject has store, drop {
-        price_feed_id: String,
-    }
-
     struct Configuration has key, store {
         id: UID,
         lender_fee_percent: u64,
