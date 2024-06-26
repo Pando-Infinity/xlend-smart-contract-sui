@@ -539,6 +539,9 @@ module lending_contract::loan {
         let sui_name = string::utf8(SUI_NAME);
         let sui_symbol = string::utf8(SUI_SYMBOL);
 
+        assert!(is_valid_price_id<T1>(configuration, lend_coin_metadata, price_info_object_lending), EPriceInfoObjectLendingIsInvalid);
+        assert!(is_valid_price_id<T2>(configuration, collateral_coin_metadata, price_info_object_collateral), EPriceInfoObjectCollateralIsInvalid);
+
         let loan_key = new_loan_key<T1, T2>(loan_id);
         let current_timestamp = clock::timestamp_ms(clock);
         let loan = state::borrow_mut<LoanKey<T1, T2>, Loan<T1, T2>>(state, loan_key);
