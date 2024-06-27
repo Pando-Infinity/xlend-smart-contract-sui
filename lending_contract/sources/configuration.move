@@ -9,6 +9,7 @@ module lending_contract::configuration {
     friend lending_contract::admin;
     friend lending_contract::operator;
     friend lending_contract::price_feed;
+    friend lending_contract::loan;
 
     const EKeyAlreadyExisted: u64 = 1;
     const EKeyIsNotExisted: u64 = 2;
@@ -24,7 +25,7 @@ module lending_contract::configuration {
         min_health_ratio: u64,
         hot_wallet: address,
         price_time_threshold: u64,
-        price_feed_ids:  Table<String, PriceFeedObject>
+        price_feed_ids:  Table<String, PriceFeedObject>,
     }
 
     public(friend) fun new(
