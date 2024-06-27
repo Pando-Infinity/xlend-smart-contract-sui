@@ -1,0 +1,18 @@
+{
+    "object_type": [
+      { "key": "VERSION_OBJECT_ID", "module": "version", "name": "Version" },
+      { "key": "ADMINCAP_OBJECT_ID", "module": "admin", "name": "AdminCap" },
+      {
+        "key": "OPERATORCAP_OBJECT_ID",
+        "module": "operator",
+        "name": "OperatorCap"
+      },
+      {
+        "key": "UPGRADECAP_OBJECT_ID",
+        "module": "package",
+        "name": "UpgradeCap"
+      },
+      { "key": "PACKAGE_ID", "module": "", "name": "" }
+    ]
+  }
+  
