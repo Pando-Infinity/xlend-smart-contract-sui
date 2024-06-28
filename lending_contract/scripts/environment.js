@@ -13,3 +13,4 @@ export const STATE = process.env.STATE || "_";
 export const CONFIGURATION = process.env.CONFIGURATION || "_";
 
 export const OPERATOR_PRIVATE_KEY = process.env.OPERATOR_PRIVATE_KEY || "_";
+export const PUBLISH_SMART_CONTRACT_COMMAND = process.env.PUBLISH_SMART_CONTRACT_COMMAND || "_";
