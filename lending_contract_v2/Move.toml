@@ -1,0 +1,12 @@
+[package]
+name = "lending_contract_v2"
+edition = "2024.beta"
+
+[dependencies]
+Pyth = { git = "https://github.com/pyth-network/pyth-crosschain.git", subdir = "target_chains/sui/contracts", rev = "sui-contract-movement-m2-devnet" }
+
+[addresses]
+lending_contract_v2 = "0x0"
+admin = "0x0"
+operator = "0x0"
+
