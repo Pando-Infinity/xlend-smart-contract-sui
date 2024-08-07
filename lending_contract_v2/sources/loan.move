@@ -401,7 +401,6 @@ module lending_contract_v2::loan {
     }
 
     public(package) fun system_fund_transfer<LendCoinType, CollateralCoinType>(
-        version: &Version,
         configuration: &Configuration,
         state: &mut State,
         offer_id: ID,
@@ -411,8 +410,6 @@ module lending_contract_v2::loan {
         collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
         _ctx: &mut TxContext,
     ) {
-        version.assert_current_version();
-
         let sender = _ctx.sender();
         let hot_wallet = configuration.hot_wallet();
         assert!(sender == hot_wallet, ESenderIsInvalid);
@@ -484,18 +481,13 @@ module lending_contract_v2::loan {
     }
 
     public(package) fun start_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
+        loan: &mut Loan<LendCoinType, CollateralCoinType>,
         configuration: &Configuration,
-        state: &mut State,
-        loan_id: ID,
         liquidating_price: u64,
         liquidating_at: u64,
         ctx: &mut TxContext,
     ) {
         let hot_wallet = configuration.hot_wallet();
-
-        let loan_key = new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
-        assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
-        let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
 
         assert!(loan.status == FUND_TRANSFERRED_STATUS.to_string(), EInvalidLoanStatus);
 
@@ -519,25 +511,20 @@ module lending_contract_v2::loan {
         loan.status = LIQUIDATING_STATUS.to_string();
 
         event::emit(LiquidatingCollateralEvent {
-            loan_id,
+            loan_id: object::id(loan),
             liquidating_price,
             liquidating_at,
         });
     }
 
     public(package) fun system_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
+        loan: &mut Loan<LendCoinType, CollateralCoinType>,
         configuration: &Configuration,
-        state: &mut State,
-        loan_id: ID,
         remaining_fund_to_borrower: Coin<LendCoinType>,
         collateral_swapped_amount: u64,
         liquidated_price: u64,
         liquidated_tx: String,
     ) {
-        let loan_key = new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
-        assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
-        let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
-
         assert!(loan.status == LIQUIDATING_STATUS.to_string(), EInvalidLoanStatus);
         assert!(loan.liquidation.is_some(), ELiquidationIsNull );
 
@@ -560,7 +547,7 @@ module lending_contract_v2::loan {
         event::emit(LiquidatedCollateralEvent {
             lender: loan.lender,
             borrower: loan.borrower,
-            loan_id,
+            loan_id: object::id(loan),
             collateral_swapped_amount,
             status: loan.status,
             liquidated_price,
