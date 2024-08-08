@@ -9,8 +9,10 @@ module lending_contract_v2::operator {
         state::{Self, State},
         custodian,
         offer::{Self, OfferKey, Offer},
-        loan::{Self, LoanKey, Loan},
+        loan_registry::{Self, Loan, LoanKey},
     };
+
+    use fun std::string::from_ascii as std::ascii::String.to_string;
 
     const ENotFoundOfferToCancel: u64 = 1;
     const ELoanNotFound: u64 = 2;
@@ -132,10 +134,10 @@ module lending_contract_v2::operator {
     }
 
     public entry fun system_fund_transfer<LendCoinType, CollateralCoinType>(
+        _: &OperatorCap,
         version: &Version,
         configuration: &Configuration,
         state: &mut State,
-        offer_id: ID,
         loan_id: ID,
         lend_coin: Coin<LendCoinType>,
         lend_coin_metadata: &CoinMetadata<LendCoinType>,
@@ -143,15 +145,19 @@ module lending_contract_v2::operator {
         ctx: &mut TxContext,
     ) {
         version.assert_current_version();
+        
+        let lend_token = lend_coin_metadata.get_symbol().to_string();
+        let collateral_token = collateral_coin_metadata.get_symbol().to_string();
 
-        loan::system_fund_transfer<LendCoinType, CollateralCoinType>(
-            configuration,
-            state,
-            offer_id,
-            loan_id,
+        let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
+        assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
+        let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
+
+        loan.system_fund_transfer<LendCoinType, CollateralCoinType>(
             lend_coin,
-            lend_coin_metadata,
-            collateral_coin_metadata,
+            lend_token,
+            collateral_token,
+            configuration.hot_wallet(),
             ctx,
         );
     }
@@ -169,15 +175,15 @@ module lending_contract_v2::operator {
     ) {
         version.assert_current_version();
 
-        let loan_key = loan::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
+        let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
         assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
         let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
         
         loan.system_finish_loan<LendCoinType, CollateralCoinType>(
-            configuration,
             custodian,
             repay_coin,
             waiting_interest,
+            configuration.lender_fee_percent(),
             ctx,
         );
     }
@@ -194,15 +200,15 @@ module lending_contract_v2::operator {
     ) {
         version.assert_current_version();
 
-        let loan_key = loan::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
+        let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
         assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
         let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
 
         loan.start_liquidate_loan_offer(
-            configuration,
             liquidating_price,
             liquidating_at,
-            ctx
+            configuration.hot_wallet(),
+            ctx,
         );
     }
 
@@ -219,13 +225,13 @@ module lending_contract_v2::operator {
     ) {
         version.assert_current_version();
 
-        let loan_key = loan::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
+        let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
         assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
         let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
 
         loan.system_liquidate_loan_offer(
-            configuration,
             remaining_fund_to_borrower,
+            configuration.borrower_fee_percent(),
             collateral_swapped_amount,
             liquidated_price,
             liquidated_tx,
