@@ -8,7 +8,7 @@ module lending_contract_v2::loan_registry {
     use std::string::String;
     use pyth::price_info::PriceInfoObject;
     use lending_contract_v2::{
-        offer::Offer,
+        offer_registry::Offer,
         configuration::Configuration,
         custodian::Custodian,
     };

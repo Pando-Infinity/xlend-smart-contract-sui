@@ -8,7 +8,7 @@ module lending_contract_v2::operator {
         custodian::Custodian,
         state::{Self, State},
         custodian,
-        offer::{Self, OfferKey, Offer},
+        offer_registry::{Self, OfferKey, Offer},
         loan_registry::{Self, Loan, LoanKey},
     };
 
@@ -122,13 +122,13 @@ module lending_contract_v2::operator {
     ) {
         version.assert_current_version();
 
-        let offer_key = offer::new_offer_key<T>(offer_id);
+        let offer_key = offer_registry::new_offer_key<T>(offer_id);
         assert!(state.contain<OfferKey<T>, Offer<T>>(offer_key), ENotFoundOfferToCancel);
         let offer = state.borrow_mut<OfferKey<T>, Offer<T>>(offer_key);
         offer.system_cancel_offer(
-            configuration,
             lend_coin,
             waiting_interest,
+            configuration.hot_wallet(),
             ctx,
         );
     }

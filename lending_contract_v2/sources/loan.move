@@ -5,7 +5,7 @@ module lending_contract_v2::loan {
     };
     use pyth::price_info::PriceInfoObject;
     use lending_contract_v2::{
-        offer::{Self, Offer, OfferKey},
+        offer_registry::{Self, Offer, OfferKey},
         state::State,
         configuration::Configuration,
         custodian::Custodian,
@@ -43,7 +43,7 @@ module lending_contract_v2::loan {
         assert!(price_info_object_lending.is_valid<LendCoinType>(configuration, lend_coin_metadata), EPriceInfoObjectLendingIsInvalid);
         assert!(price_info_object_collateral.is_valid<CollateralCoinType>(configuration, collateral_coin_metadata), EPriceInfoObjectCollateralIsInvalid);
         
-        let offer_key = offer::new_offer_key<LendCoinType>(offer_id);
+        let offer_key = offer_registry::new_offer_key<LendCoinType>(offer_id);
         assert!(state.contain<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key), EOfferNotFound);
         let offer = { state.borrow_mut<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key) };
         assert!(offer.is_available<LendCoinType>(), EOffferIsNotActive);
@@ -165,7 +165,7 @@ module lending_contract_v2::loan {
         };
 
         let ( asset_tier ) = {
-            let offer_key = offer::new_offer_key<LendCoinType>(offer_id);
+            let offer_key = offer_registry::new_offer_key<LendCoinType>(offer_id);
             assert!(state.contain<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key), EOfferNotFound);
             let offer = state.borrow<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key);
             offer.asset_tier()
