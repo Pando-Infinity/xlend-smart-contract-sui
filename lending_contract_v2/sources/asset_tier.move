@@ -50,6 +50,13 @@ module lending_contract_v2::asset_tier {
         asset_tier.duration = duration;
     }
 
+    public(package) fun delete<T>(
+        asset_tier: AssetTier<T>,
+    ) {
+        let AssetTier {id, amount:_, duration:_ } = asset_tier;
+        object::delete(id);
+    }
+
     public fun new_asset_tier_key<T>(
         name: String
     ): AssetTierKey<T> {

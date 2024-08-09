@@ -80,4 +80,11 @@ module lending_contract_v2::state {
     ): bool {
         ofield::exists_with_type<K, V>(&state.id, key)
     }
+
+    public(package) fun remove<K: copy + drop + store, V: key + store>(
+        state: &mut State,
+        key: K
+    ): V {
+        ofield::remove<K, V>(&mut state.id, key)
+    }
 }

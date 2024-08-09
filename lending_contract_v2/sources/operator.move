@@ -150,6 +150,20 @@ module lending_contract_v2::operator {
             duration,
         );
     }
+
+    public entry fun delete_asset_tier<T>(
+        _: &OperatorCap,
+        version: &Version,
+        state: &mut State,
+        name: String,
+    ) {
+        version.assert_current_version();
+
+        let asset_tier_key = asset_tier::new_asset_tier_key<T>(name);
+        let asset_tier = state.remove<AssetTierKey<T>, AssetTier<T>>(asset_tier_key);
+
+        asset_tier.delete();
+    }
     
     public entry fun system_cancel_offer<T>(
         _: &OperatorCap,
