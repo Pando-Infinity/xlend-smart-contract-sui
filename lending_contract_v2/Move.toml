@@ -1,12 +1,12 @@
 [package]
 name = "lending_contract_v2"
 edition = "2024.beta"
+published-at="0xc87bbfd4dd718fd4baf7739c843e270a513fc3eb4d8de2bffe5449ef2f99dd27"
 
 [dependencies]
-Pyth = { git = "https://github.com/pyth-network/pyth-crosschain.git", subdir = "target_chains/sui/contracts", rev = "sui-contract-movement-m2-devnet" }
+Pyth = { git = "https://github.com/pyth-network/pyth-crosschain.git", subdir = "target_chains/sui/contracts", rev = "sui-contract-testnet" }
 
 [addresses]
 lending_contract_v2 = "0x0"
-admin = "0x0"
-operator = "0x0"
-
+admin = "0x465370ebd8b13a08d34d92fc6911fa98869c85931135339ad1f858090022635b"
+operator = "0x465370ebd8b13a08d34d92fc6911fa98869c85931135339ad1f858090022635b"

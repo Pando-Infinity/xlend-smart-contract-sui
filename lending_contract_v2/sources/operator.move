@@ -8,6 +8,7 @@ module lending_contract_v2::operator {
         custodian::Custodian,
         state::{Self, State},
         custodian,
+        asset_tier::{Self, AssetTierKey, AssetTier},
         offer_registry::{Self, OfferKey, Offer},
         loan_registry::{Self, Loan, LoanKey},
     };
@@ -108,6 +109,46 @@ module lending_contract_v2::operator {
     ) {
         version.assert_current_version();
         configuration.remove_price_feed_id(coin_symbol);
+    }
+
+    public entry fun init_asset_tier<T>(
+        _: &OperatorCap,
+        version: &Version,
+        state: &mut State,
+        name: String,
+        amount: u64,
+        duration: u64,
+        ctx: &mut TxContext,
+    ) {
+        version.assert_current_version();
+
+        let asset_tier = asset_tier::new<T>(
+            name,
+            amount,
+            duration,
+            ctx,
+        );
+        let asset_tier_key = asset_tier::new_asset_tier_key<T>(name);
+        state.add<AssetTierKey<T>, AssetTier<T>>(asset_tier_key, asset_tier);
+    }
+
+    public entry fun update_asset_tier<T>(
+        _: &OperatorCap,
+        version: &Version,
+        state: &mut State,
+        name: String,
+        amount: u64,
+        duration: u64,
+    ) {
+        version.assert_current_version();
+
+        let asset_tier_key = asset_tier::new_asset_tier_key<T>(name);
+        let asset_tier = state.borrow_mut<AssetTierKey<T>, AssetTier<T>>(asset_tier_key);
+
+        asset_tier.update<T>(
+            amount,
+            duration,
+        );
     }
     
     public entry fun system_cancel_offer<T>(
