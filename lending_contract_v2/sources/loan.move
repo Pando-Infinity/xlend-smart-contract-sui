@@ -11,10 +11,10 @@ module lending_contract_v2::loan {
         custodian::Custodian,
         version::Version,
         loan_registry::{Self, Loan, LoanKey},
+        utils,
     };
 
     use fun lending_contract_v2::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
-    use fun std::string::from_ascii as std::ascii::String.to_string;
 
     const EOfferNotFound: u64 = 1;
     const EOffferIsNotActive: u64 = 2;
@@ -77,8 +77,6 @@ module lending_contract_v2::loan {
         state: &mut State,
         loan_id: ID,
         repay_coin: Coin<LendCoinType>,
-        lend_coin_metadata: &CoinMetadata<LendCoinType>,
-        collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -89,8 +87,8 @@ module lending_contract_v2::loan {
         assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
         let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
 
-        let lend_token = lend_coin_metadata.get_symbol<LendCoinType>().to_string();
-        let collateral_token = collateral_coin_metadata.get_symbol<CollateralCoinType>().to_string();
+        let lend_token = utils::get_type<LendCoinType>();
+        let collateral_token = utils::get_type<CollateralCoinType>();
 
         loan.repay(
             custodian,
@@ -147,15 +145,13 @@ module lending_contract_v2::loan {
         state: &mut State,
         loan_id: ID,
         deposit_coin: Coin<CollateralCoinType>,
-        lend_coin_metadata: &CoinMetadata<LendCoinType>,
-        collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
         clock: &Clock,
     ) {
         version.assert_current_version();
 
         let current_timestamp = clock.timestamp_ms();
-        let lend_token = lend_coin_metadata.get_symbol<LendCoinType>().to_string();
-        let collateral_token = collateral_coin_metadata.get_symbol<CollateralCoinType>().to_string();
+        let lend_token = utils::get_type<LendCoinType>();
+        let collateral_token = utils::get_type<CollateralCoinType>();
         
         let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
         let ( offer_id ) = {

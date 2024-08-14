@@ -1,6 +1,6 @@
 module lending_contract_v2::operator {
     use std::string::String;
-    use sui::coin::{Coin, CoinMetadata};
+    use sui::coin::Coin;
             
     use lending_contract_v2::{
         version::{Version},
@@ -11,9 +11,8 @@ module lending_contract_v2::operator {
         asset_tier::{Self, AssetTierKey, AssetTier},
         offer_registry::{Self, OfferKey, Offer},
         loan_registry::{Self, Loan, LoanKey},
+        utils,
     };
-
-    use fun std::string::from_ascii as std::ascii::String.to_string;
 
     const ENotFoundOfferToCancel: u64 = 1;
     const ELoanNotFound: u64 = 2;
@@ -195,14 +194,12 @@ module lending_contract_v2::operator {
         state: &mut State,
         loan_id: ID,
         lend_coin: Coin<LendCoinType>,
-        lend_coin_metadata: &CoinMetadata<LendCoinType>,
-        collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
         ctx: &mut TxContext,
     ) {
         version.assert_current_version();
         
-        let lend_token = lend_coin_metadata.get_symbol().to_string();
-        let collateral_token = collateral_coin_metadata.get_symbol().to_string();
+        let lend_token = utils::get_type<LendCoinType>();
+        let collateral_token = utils::get_type<CollateralCoinType>();
 
         let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
         assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);

@@ -1,5 +1,8 @@
 module lending_contract_v2::utils {
-    use std::string::{Self, String};
+    use std::{
+        type_name,
+        string::{Self, String}
+    };
 
     use fun std::string::utf8 as vector.to_string;
 
@@ -45,5 +48,10 @@ module lending_contract_v2::utils {
         let value = *vector::borrow<vector<u8>>(&HEXTABLE, (element as u64));
             
         value.to_string()
+    }
+
+    public fun get_type<T>(): String {
+        let type_name = type_name::get<T>();
+        string::from_ascii(type_name.into_string())
     }
 }

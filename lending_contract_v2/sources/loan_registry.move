@@ -11,11 +11,11 @@ module lending_contract_v2::loan_registry {
         offer_registry::Offer,
         configuration::Configuration,
         custodian::Custodian,
+        utils,
     };
 
     use fun lending_contract_v2::price_feed::get_value_by_usd as PriceInfoObject.get_value_by_usd;
     use fun std::string::utf8 as vector.to_string;
-    use fun std::string::from_ascii as std::ascii::String.to_string;
     use fun sui::coin::from_balance as Balance.to_coin;
 
     const ECollateralNotValidToMinHealthRatio: u64 = 1;
@@ -199,8 +199,8 @@ module lending_contract_v2::loan_registry {
             amount: offer.amount<LendCoinType>(),
             duration: offer.duration<LendCoinType>(),
             collateral_amount,
-            lend_token: lend_coin_metadata.get_symbol().to_string(),
-            collateral_token: collateral_coin_metadata.get_symbol().to_string(),
+            lend_token: utils::get_type<LendCoinType>(),
+            collateral_token: utils::get_type<CollateralCoinType>(),
             lender: offer.lender<LendCoinType>(),
             borrower,
             start_timestamp,
