@@ -3,7 +3,6 @@ module lending_contract_v2::loan {
         coin::{Coin, CoinMetadata},
         clock::Clock,
     };
-    use pyth::price_info::PriceInfoObject;
     use lending_contract_v2::{
         offer_registry::{Self, Offer, OfferKey},
         state::State,
@@ -11,6 +10,7 @@ module lending_contract_v2::loan {
         custodian::Custodian,
         version::Version,
         loan_registry::{Self, Loan, LoanKey},
+        price_info::PriceInfoObject,
         utils,
     };
 
@@ -30,8 +30,8 @@ module lending_contract_v2::loan {
         collateral: Coin<CollateralCoinType>,
         lend_coin_metadata: &CoinMetadata<LendCoinType>,
         collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
-        price_info_object_lending: &PriceInfoObject,
-        price_info_object_collateral: &PriceInfoObject,
+        price_info_object_lending: &PriceInfoObject<LendCoinType>,
+        price_info_object_collateral: &PriceInfoObject<CollateralCoinType>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -111,8 +111,8 @@ module lending_contract_v2::loan {
         withdraw_amount: u64,
         lend_coin_metadata: &CoinMetadata<LendCoinType>,
         collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
-        price_info_object_lending: &PriceInfoObject,
-        price_info_object_collateral: &PriceInfoObject,
+        price_info_object_lending: &PriceInfoObject<LendCoinType>,
+        price_info_object_collateral: &PriceInfoObject<CollateralCoinType>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
