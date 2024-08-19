@@ -7,6 +7,7 @@ module lending_contract_v2::asset_tier {
         name: String,
         amount: u64,
         duration: u64,
+        lend_token: String,
     }
 
     public struct AssetTierKey<phantom T> has copy, drop, store {
@@ -23,6 +24,7 @@ module lending_contract_v2::asset_tier {
         name: String,
         amount: u64,
         duration: u64,
+        lend_token: String,
         ctx: &mut TxContext,
     ): AssetTier<T> {
         let asset_tier = AssetTier<T> {
@@ -36,6 +38,7 @@ module lending_contract_v2::asset_tier {
             name,
             amount,
             duration,
+            lend_token,
         });
 
         asset_tier

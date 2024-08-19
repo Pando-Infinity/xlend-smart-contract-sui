@@ -155,10 +155,12 @@ module lending_contract_v2::operator {
     ) {
         version.assert_current_version();
 
+        let lend_token = utils::get_type<T>();
         let asset_tier = asset_tier::new<T>(
             name,
             amount,
             duration,
+            lend_token,
             ctx,
         );
         let asset_tier_key = asset_tier::new_asset_tier_key<T>(name);
