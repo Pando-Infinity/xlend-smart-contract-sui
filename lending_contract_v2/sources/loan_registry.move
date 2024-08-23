@@ -23,7 +23,6 @@ module lending_contract_v2::loan_registry {
     const EInvalidLoanStatus: u64 = 3;
     const ENotEnoughBalanceToRepay: u64 = 4;
     const ECanNotRepayExpiredLoan: u64 = 5;
-    const ESenderIsInvalid: u64 = 6;
     const ELiquidationIsNull: u64 = 7;
     const EInvalidCoinInput: u64 = 8;
     const ECollateralIsInsufficient: u64 = 9;
@@ -334,11 +333,8 @@ module lending_contract_v2::loan_registry {
         lend_coin: Coin<LendCoinType>,
         lend_token: String,
         collateral_token: String,
-        hot_wallet: address,
         _ctx: &mut TxContext,
     ) {
-        let sender = _ctx.sender();
-        assert!(sender == hot_wallet, ESenderIsInvalid);
         assert!(loan.status == MATCHED_STATUS.to_string(), EInvalidLoanStatus);
 
         let borrower = loan.borrower;

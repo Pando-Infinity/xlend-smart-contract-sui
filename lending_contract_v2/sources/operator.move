@@ -218,7 +218,6 @@ module lending_contract_v2::operator {
         offer.system_cancel_offer(
             lend_coin,
             waiting_interest,
-            configuration.hot_wallet(),
             ctx,
         );
     }
@@ -245,7 +244,6 @@ module lending_contract_v2::operator {
             lend_coin,
             lend_token,
             collateral_token,
-            configuration.hot_wallet(),
             ctx,
         );
     }

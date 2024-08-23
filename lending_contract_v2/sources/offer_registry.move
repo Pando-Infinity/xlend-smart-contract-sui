@@ -9,8 +9,7 @@ module lending_contract_v2::offer_registry {
 
     const EInvalidOfferStatus: u64 = 1;
     const ESenderIsNotOfferOwner: u64 = 2;
-    const ESenderIsInvalid: u64 = 3;
-    const ELendCoinIsInvalid: u64 = 4;
+    const ELendCoinIsInvalid: u64 = 3;
 
 
     const CREATED_STATUS: vector<u8> = b"Created";
@@ -142,14 +141,11 @@ module lending_contract_v2::offer_registry {
         offer: &mut Offer<T>,
         lend_coin: Coin<T>,
         waiting_interest: Coin<T>,
-        hot_wallet: address,
         ctx: &mut TxContext,
     ) {
-        let sender = ctx.sender();
         let lend_amount = offer.amount;
         let lender = offer.lender;
 
-        assert!(sender == hot_wallet, ESenderIsInvalid);
         assert!(offer.status == CANCELLING_STATUS.to_string(), EInvalidOfferStatus);
         assert!(lend_coin.value() == lend_amount, ELendCoinIsInvalid);
 
