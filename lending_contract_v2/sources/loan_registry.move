@@ -224,8 +224,8 @@ module lending_contract_v2::loan_registry {
         assert!(loan.status == FUND_TRANSFERRED_STATUS.to_string(), EInvalidLoanStatus);
         assert!(loan.start_timestamp + (loan.duration * 1000) > current_timestamp, ECanNotRepayExpiredLoan);
         
-        let borrower_fee_amount = ((loan.amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
         let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
+        let borrower_fee_amount = ((interest_amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
         let repay_amount = loan.amount + borrower_fee_amount + interest_amount;
         assert!(repay_coin.value<LendCoinType>() == repay_amount, ENotEnoughBalanceToRepay);
 
@@ -361,8 +361,8 @@ module lending_contract_v2::loan_registry {
         lender_fee_percent: u64,
         ctx: &mut TxContext,
     ) {
-        let lender_fee_amount = ((loan.amount * lender_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64);
         let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
+        let lender_fee_amount = ((interest_amount * lender_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64);
         let repay_to_lender_amount = loan.amount + interest_amount - lender_fee_amount;
 
         assert!(repay_coin.value<LendCoinType>() == repay_to_lender_amount + lender_fee_amount, ENotEnoughBalanceToRepay);
@@ -436,8 +436,8 @@ module lending_contract_v2::loan_registry {
         liquidation.liquidated_price = option::some<u64>(liquidated_price);
         liquidation.liquidated_tx = option::some<String>(liquidated_tx);
     
-        let borrower_fee_amount = ((loan.amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
         let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
+        let borrower_fee_amount = ((interest_amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
         let repay_amount = loan.amount + borrower_fee_amount + interest_amount;
         let remain_amount = collateral_swapped_amount - repay_amount;
 
