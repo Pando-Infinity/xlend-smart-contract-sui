@@ -3,9 +3,9 @@ import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { RPC_URL, VERSION, OPERATOR_PRIVATE_KEY, UPGRADED_PACKAGE, LEND_COIN_TYPE, OPERATOR_CAP } from './environment.js';
 import { getSignerByPrivateKey } from './common.js';
 
-const LENDER_FEE_PERCENT = 200;
-const BORROWER_FEE_PERCENT = 200;
-const MIN_HEALTH_RATIO = 15000;
+const LENDER_FEE_PERCENT = 500;
+const BORROWER_FEE_PERCENT = 500;
+const MIN_HEALTH_RATIO = 11000;
 const HOT_WALLET = "0x7d8e23c6ca764d6012310907a2b5b936e127ef93547ae8a7424cea776e90772b";
 const PRICE_TIME_THRESHOLD = 90;
 

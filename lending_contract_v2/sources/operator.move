@@ -11,7 +11,6 @@ module lending_contract_v2::operator {
         asset_tier::{Self, AssetTierKey, AssetTier},
         offer_registry::{Self, OfferKey, Offer},
         loan_registry::{Self, Loan, LoanKey},
-        price_info::{Self, PriceInfoObject},
         utils,
     };
 
@@ -51,39 +50,6 @@ module lending_contract_v2::operator {
         );
         state::new(ctx);
         custodian::new<T>(ctx);
-    }
-
-    public entry fun new_price_info_object<T>(
-        _: &OperatorCap,
-        version: &Version,
-        price: u64,
-        expo: u64,
-        is_negative: bool,
-        ctx: &mut TxContext
-    ) {
-        version.assert_current_version();
-        price_info::new<T>(
-            price,
-            expo,
-            is_negative,
-            ctx,
-        );
-    }
-
-    public entry fun update_price_info_object<T>(
-        _: &OperatorCap,
-        version: &Version,
-        price_info: &mut PriceInfoObject<T>,
-        price: u64,
-        expo: u64,
-        is_negative: bool,
-    ) {
-        version.assert_current_version();
-        price_info.update_price_info<T>(
-            price,
-            expo,
-            is_negative,
-        );
     }
  
     public entry fun update_configuration(
