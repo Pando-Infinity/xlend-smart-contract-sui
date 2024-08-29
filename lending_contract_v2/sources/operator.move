@@ -34,6 +34,7 @@ module lending_contract_v2::operator {
         version: &Version,
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
+        max_offer_interest: u64,
         min_health_ratio: u64, 
         hot_wallet: address,
         price_time_threshold: u64,
@@ -43,6 +44,7 @@ module lending_contract_v2::operator {
         configuration::new(
             lender_fee_percent,
             borrower_fee_percent,
+            max_offer_interest,
             min_health_ratio,
             hot_wallet,
             price_time_threshold,
@@ -58,6 +60,7 @@ module lending_contract_v2::operator {
         configuration: &mut Configuration,
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
+        max_offer_interest: u64,
         min_health_ratio: u64, 
         hot_wallet: address,
         price_time_threshold: u64,
@@ -66,24 +69,37 @@ module lending_contract_v2::operator {
         configuration.update(
             lender_fee_percent,
             borrower_fee_percent,
+            max_offer_interest,
             min_health_ratio,
             hot_wallet,
             price_time_threshold,
         );
     }
 
-    public entry fun add_price_feed_id(
+    public entry fun add_configuration_token<T>(
         _: &OperatorCap,
         version: &Version,
         configuration: &mut Configuration,
         coin_symbol: String,
         price_feed_id: String,
+        is_lend_token: bool,
     ) {
         version.assert_current_version();
-        configuration.add_price_feed_id(
+        configuration.add_token<T>(
             coin_symbol,
             price_feed_id,
+            is_lend_token,
         );
+    }
+
+    public entry fun remove_configuration_token<T>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &mut Configuration,
+        coin_symbol: String,
+    ) {
+        version.assert_current_version();
+        configuration.remove_token<T>(coin_symbol);
     }
 
     public entry fun update_price_feed_id(
