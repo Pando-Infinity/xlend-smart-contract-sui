@@ -5,9 +5,10 @@ import { getSignerByPrivateKey } from './common.js';
 
 const LENDER_FEE_PERCENT = 500;
 const BORROWER_FEE_PERCENT = 500;
+const MAX_OFFER_INTEREST = 20000; //200%
 const MIN_HEALTH_RATIO = 11000;
 const HOT_WALLET = "0x7d8e23c6ca764d6012310907a2b5b936e127ef93547ae8a7424cea776e90772b";
-const PRICE_TIME_THRESHOLD = 90;
+const PRICE_TIME_THRESHOLD = 9000000000;
 
 const initSystem = async () => {
     const suiClient = new SuiClient({ url: RPC_URL });
@@ -22,6 +23,7 @@ const initSystem = async () => {
             tx.object(VERSION),
             tx.pure.u64(LENDER_FEE_PERCENT),
             tx.pure.u64(BORROWER_FEE_PERCENT),
+            tx.pure.u64(MAX_OFFER_INTEREST),
             tx.pure.u64(MIN_HEALTH_RATIO),
             tx.pure.address(HOT_WALLET),
             tx.pure.u64(PRICE_TIME_THRESHOLD),

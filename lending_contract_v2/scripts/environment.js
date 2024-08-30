@@ -13,5 +13,6 @@ export const STATE = process.env.STATE || "_";
 export const CUSTODIAN = process.env.CUSTODIAN || "_";
 
 export const LEND_COIN_TYPE = process.env.LEND_COIN_TYPE || "_";
+export const SUI_COLLATERAL_COIN_TYPE = process.env.SUI_COLLATERAL_COIN_TYPE || "_";
 
 export const OPERATOR_PRIVATE_KEY = process.env.OPERATOR_PRIVATE_KEY || "_";

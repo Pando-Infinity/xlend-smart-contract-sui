@@ -27,19 +27,20 @@ const initAssetTier = async () => {
     const signer = getSignerByPrivateKey(OPERATOR_PRIVATE_KEY);
 
     const tx = new TransactionBlock();
+    for (let i = 0; i < names.length; i++) {
         tx.moveCall({
-            target: `${UPGRADED_PACKAGE}::operator::update_asset_tier`,
+            target: `${UPGRADED_PACKAGE}::operator::init_asset_tier`,
             typeArguments: [LEND_COIN_TYPE],
             arguments: [
                 tx.object(OPERATOR_CAP),
                 tx.object(VERSION),
                 tx.object(STATE),
-                tx.pure.string('asset_tier_sui_10000'),
-                tx.pure.u64(10000000000),
+                tx.pure.string(names[i]),
+                tx.pure.u64(amounts[i]),
                 tx.pure.u64(duration),
             ]
         });
-
+    }
     const res = await suiClient.signAndExecuteTransactionBlock({
         transactionBlock: tx,
         signer,
