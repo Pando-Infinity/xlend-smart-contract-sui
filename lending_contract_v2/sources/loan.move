@@ -3,7 +3,6 @@ module lending_contract_v2::loan {
         coin::{Coin, CoinMetadata},
         clock::Clock,
     };
-    use pyth::price_info::PriceInfoObject;
     use lending_contract_v2::{
         offer_registry::{Self, Offer, OfferKey},
         state::State,
@@ -11,31 +10,28 @@ module lending_contract_v2::loan {
         custodian::Custodian,
         version::Version,
         loan_registry::{Self, Loan, LoanKey},
+        price_info::PriceInfoObject,
         utils,
     };
 
     use fun lending_contract_v2::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
 
     const EOfferNotFound: u64 = 1;
-    const EOfferIsNotActive: u64 = 2;
+    const EOffferIsNotActive: u64 = 2;
     const ELoanNotFound: u64 = 3;
     const EPriceInfoObjectLendingIsInvalid: u64 = 4;
     const EPriceInfoObjectCollateralIsInvalid: u64 = 5;
-    const ELendCoinIsInvalid: u64 = 6;
-    const ECollateralCoinIsInvalid: u64 = 7;
-    const EInterestIsInvalid: u64 = 8;
 
     public entry fun take_loan<LendCoinType, CollateralCoinType>(
         version: &Version,
         configuration: &Configuration,
         state: &mut State,
         offer_id: ID,
-        interest: u64,
         collateral: Coin<CollateralCoinType>,
         lend_coin_metadata: &CoinMetadata<LendCoinType>,
         collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
-        price_info_object_lending: &PriceInfoObject,
-        price_info_object_collateral: &PriceInfoObject,
+        price_info_object_lending: &PriceInfoObject<LendCoinType>,
+        price_info_object_collateral: &PriceInfoObject<CollateralCoinType>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -44,16 +40,13 @@ module lending_contract_v2::loan {
         let current_timestamp = clock.timestamp_ms();
         let borrower = ctx.sender();
 
-        assert!(configuration.is_valid_lend_coin<LendCoinType>(), ELendCoinIsInvalid);
-        assert!(configuration.is_valid_collateral_coin<CollateralCoinType>(), ECollateralCoinIsInvalid);
         assert!(price_info_object_lending.is_valid<LendCoinType>(configuration, lend_coin_metadata), EPriceInfoObjectLendingIsInvalid);
         assert!(price_info_object_collateral.is_valid<CollateralCoinType>(configuration, collateral_coin_metadata), EPriceInfoObjectCollateralIsInvalid);
         
         let offer_key = offer_registry::new_offer_key<LendCoinType>(offer_id);
         assert!(state.contain<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key), EOfferNotFound);
         let offer = { state.borrow_mut<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key) };
-        assert!(offer.is_available<LendCoinType>(), EOfferIsNotActive);
-        assert!(interest == offer.interest(),  EInterestIsInvalid);
+        assert!(offer.is_available<LendCoinType>(), EOffferIsNotActive);
 
         let loan = loan_registry::new_loan(
             configuration,
@@ -118,8 +111,8 @@ module lending_contract_v2::loan {
         withdraw_amount: u64,
         lend_coin_metadata: &CoinMetadata<LendCoinType>,
         collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
-        price_info_object_lending: &PriceInfoObject,
-        price_info_object_collateral: &PriceInfoObject,
+        price_info_object_lending: &PriceInfoObject<LendCoinType>,
+        price_info_object_collateral: &PriceInfoObject<CollateralCoinType>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {

@@ -1,9 +1,10 @@
 [package]
 name = "lending_contract_v2"
 edition = "2024.beta"
+published-at="0xc6b0e8387382fd3294ab3d68f4e689002ce44bc7a2dcd601431359879626ed7e"
 
 [dependencies]
-Pyth = { git = "https://github.com/pyth-network/pyth-crosschain.git", subdir = "target_chains/sui/contracts", rev = "sui-contract-testnet" }
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "041c5f2bae2fe52079e44b70514333532d69f4e6" }
 
 [addresses]
 lending_contract_v2 = "0x0"

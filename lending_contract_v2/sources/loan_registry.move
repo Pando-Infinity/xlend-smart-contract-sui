@@ -6,11 +6,11 @@ module lending_contract_v2::loan_registry {
         event,
     };
     use std::string::String;
-    use pyth::price_info::PriceInfoObject;
     use lending_contract_v2::{
         offer_registry::Offer,
         configuration::Configuration,
         custodian::Custodian,
+        price_info::PriceInfoObject,
         utils,
     };
 
@@ -158,8 +158,8 @@ module lending_contract_v2::loan_registry {
         borrower: address,
         lend_coin_metadata: &CoinMetadata<LendCoinType>,
         collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
-        price_info_object_lending: &PriceInfoObject,
-        price_info_object_collateral: &PriceInfoObject,
+        price_info_object_lending: &PriceInfoObject<LendCoinType>,
+        price_info_object_collateral: &PriceInfoObject<CollateralCoinType>,
         start_timestamp: u64,
         clock: &Clock,
         ctx: &mut TxContext,
@@ -257,8 +257,8 @@ module lending_contract_v2::loan_registry {
         configuration: &Configuration,
         lend_coin_metadata: &CoinMetadata<LendCoinType>,
         collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
-        price_info_object_lending: &PriceInfoObject,
-        price_info_object_collateral: &PriceInfoObject,
+        price_info_object_lending: &PriceInfoObject<LendCoinType>,
+        price_info_object_collateral: &PriceInfoObject<CollateralCoinType>,
         withdraw_amount: u64,
         current_timestamp: u64,
         clock: &Clock,
@@ -473,8 +473,8 @@ module lending_contract_v2::loan_registry {
         collateral_amount: u64,
         lend_coin_metadata: &CoinMetadata<LendCoinType>,
         collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
-        price_info_object_lending: &PriceInfoObject,
-        price_info_object_collateral: &PriceInfoObject,
+        price_info_object_lending: &PriceInfoObject<LendCoinType>,
+        price_info_object_collateral: &PriceInfoObject<CollateralCoinType>,
         clock: &Clock,
     ): bool {
         let lend_decimals = lend_coin_metadata.get_decimals<LendCoinType>();

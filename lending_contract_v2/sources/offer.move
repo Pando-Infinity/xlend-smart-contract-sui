@@ -14,7 +14,6 @@ module lending_contract_v2::offer {
     const ENotEnoughBalanceToCreateOffer: u64 = 3;
     const ENotFoundOfferToCancel: u64 = 4;
     const ENotFoundOfferToEdit: u64 = 5;
-    const EInvalidLendCoin: u64 = 6;
 
     public entry fun create_offer<T>(
         version: &Version,
@@ -27,8 +26,8 @@ module lending_contract_v2::offer {
     ) {
         version.assert_current_version();
         let lender = ctx.sender();
-        assert!(configuration.is_valid_lend_coin<T>(), EInvalidLendCoin);
-        assert!(interest > 0 && interest <= configuration.max_offer_interest(), EInvalidInterestValue);
+        
+        assert!(interest > 0, EInvalidInterestValue);
 
         let asset_tier_key = asset_tier::new_asset_tier_key<T>(asset_tier_name);
         assert!(state.contain<AssetTierKey<T>, AssetTier<T>>(asset_tier_key), ENotFoundAssetTier);

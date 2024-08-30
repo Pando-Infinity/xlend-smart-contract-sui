@@ -1,25 +1,14 @@
 module lending_contract_v2::configuration {
-    use sui::{
-        dynamic_field as field,
-        table::{Self, Table}
-    };
+    use sui::table::{Self, Table};
     use std::string::String;
-    use lending_contract_v2::utils;
-
-    use fun std::string::utf8 as vector.to_string;
 
     const EPriceFeedIdAlreadyExisted: u64 = 1;
     const EPriceFeedIdIsNotExisted: u64 = 2;
-    const ETokenAlreadyAdded: u64 = 3;
-
-    const LEND_TYPE: vector<u8> = b"Lend";
-    const COLLATERAL_TYPE: vector<u8> = b"Collateral";
 
     public struct Configuration has key, store {
         id: UID,
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
-        max_offer_interest: u64,
         min_health_ratio: u64,
         hot_wallet: address,
         price_time_threshold: u64,
@@ -29,7 +18,6 @@ module lending_contract_v2::configuration {
     public(package) fun new(
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
-        max_offer_interest: u64,
         min_health_ratio: u64,
         hot_wallet: address,
         price_time_threshold: u64,
@@ -39,7 +27,6 @@ module lending_contract_v2::configuration {
             id: object::new(ctx),
             lender_fee_percent,
             borrower_fee_percent,
-            max_offer_interest,
             min_health_ratio,
             hot_wallet,
             price_time_threshold,
@@ -52,78 +39,15 @@ module lending_contract_v2::configuration {
         configuration: &mut Configuration,
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
-        max_offer_interest: u64,
         min_health_ratio: u64,
         hot_wallet: address,
         price_time_threshold: u64,
     ) {
         configuration.lender_fee_percent = lender_fee_percent;
         configuration.borrower_fee_percent = borrower_fee_percent;
-        configuration.max_offer_interest = max_offer_interest;
         configuration.min_health_ratio = min_health_ratio; 
         configuration.hot_wallet = hot_wallet;
         configuration.price_time_threshold = price_time_threshold;
-    }
-
-    public(package) fun add<K: copy + drop + store, V: store>(
-        configuration: &mut Configuration,
-        key: K,
-        value: V
-    ) {
-        field::add(&mut configuration.id, key, value);
-    }
-
-    public(package) fun borrow<K: copy + drop + store, V: store>(
-        configuration: &Configuration,
-        key: K
-    ): &V {
-        field::borrow<K, V>(&configuration.id, key)
-    }
-
-    public(package) fun borrow_mut<K: copy + drop + store, V: store>(
-        configuration: &mut Configuration,
-        key: K
-    ): &mut V {
-        field::borrow_mut<K, V>(&mut configuration.id, key)
-    }
-
-    public(package) fun contain<K: copy + drop + store, V: store>(
-        configuration: &Configuration,
-        key: K
-    ): bool {
-        field::exists_with_type<K, V>(&configuration.id, key)
-    }
-
-    public(package) fun remove<K: copy + drop + store, V: store>(
-        configuration: &mut Configuration,
-        key: K
-    ): V {
-        field::remove<K, V>(&mut configuration.id, key)
-    }
-
-    public(package) fun add_token<T>(
-        configuration: &mut Configuration,
-        coin_symbol: String,
-        price_feed_id: String,
-        is_lend_token: bool,
-    ) {
-        let token_type = utils::get_type<T>();
-        assert!(!configuration.contain<String, String>(token_type), ETokenAlreadyAdded);
-        if (is_lend_token) {
-            configuration.add<String, String>(token_type, LEND_TYPE.to_string());
-        } else {
-            configuration.add<String, String>(token_type, COLLATERAL_TYPE.to_string());
-        };
-        configuration.add_price_feed_id(coin_symbol, price_feed_id);
-    }
-
-    public(package) fun remove_token<T>(
-        configuration: &mut Configuration,
-        coin_symbol: String,
-    ) {
-        let token_type = utils::get_type<T>();
-        configuration.remove<String, String>(token_type);
-        configuration.remove_price_feed_id(coin_symbol);
     }
 
     public(package) fun add_price_feed_id(
@@ -165,12 +89,6 @@ module lending_contract_v2::configuration {
         configuration.borrower_fee_percent
     }
 
-    public fun max_offer_interest(
-        configuration: &Configuration
-    ): u64 {
-        configuration.max_offer_interest
-    }
-
     public fun hot_wallet(
         configuration: &Configuration
     ): address {
@@ -202,26 +120,5 @@ module lending_contract_v2::configuration {
         coin_symbol: String,
     ): bool {
         configuration.price_feed_ids.contains(coin_symbol)
-    }
-
-    public fun is_valid_lend_coin<T>(
-        configuration: &Configuration
-    ): bool {
-        let token_type = utils::get_type<T>();
-        if (!configuration.contain<String, String>(token_type)) {
-            return false
-        };
-
-        *configuration.borrow<String, String>(token_type) == LEND_TYPE.to_string()
-    }
-
-    public fun is_valid_collateral_coin<T>(
-        configuration: &Configuration
-    ): bool {
-        let token_type = utils::get_type<T>();
-        if (!configuration.contain<String, String>(token_type)) {
-            return false
-        };
-        *configuration.borrow<String, String>(token_type) == COLLATERAL_TYPE.to_string()
     }
 }
