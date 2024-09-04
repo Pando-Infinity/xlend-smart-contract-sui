@@ -20,6 +20,17 @@ import {
   NFT_SYMBOL,
   getSignerByPrivateKey,
 } from "./common.js";
+import { createObjectCsvWriter } from 'csv-writer';
+import * as path from 'path';
+
+const csvWriter = createObjectCsvWriter({
+	path: 'distributed_nft_output.csv',
+	header: [
+		{ id: 'txHash', title: 'TxHash' },
+		{ id: 'addresses', title: 'Addresses' }, 
+	],
+	append: true,
+});
 
 const splitAddresses = (addresses) => {
   const chunkAddresses = addresses.reduce((chunk, item, index) => {
@@ -63,6 +74,13 @@ const submitDistributeNFts = async (addresses) => {
     signer,
   });
   console.log({ response: res }, "Operator distribute NFTs to addressess");
+	const dataToWrite = [{
+		txHash: res.digest,
+		addresses,
+	}];
+	csvWriter.writeRecords(dataToWrite)
+	.then(() => console.log('Distribute NFTs result was written successfully'))
+	.catch((err) => console.log(err));
 };
 
 const distributeNFTs = async () => {
@@ -79,8 +97,12 @@ const distributeNFTs = async () => {
       console.log("Read distribute nfts csv file successfully");
       const chunkAddresses = splitAddresses(addresses);
       for (const chunk of chunkAddresses) {
-        console.log(chunk);
-        await submitDistributeNFts(chunk);
+				try {
+					console.log(chunk);
+					await submitDistributeNFts(chunk);
+				} catch (err) {
+					console.log('Failed to distribute nfts to addresses:', chunk);
+				}
       }
     });
 };
