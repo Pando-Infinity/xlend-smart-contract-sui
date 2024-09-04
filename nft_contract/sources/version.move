@@ -25,11 +25,11 @@ module nft_contract::version {
     }
 
     // ======= version control ==========
-    public fun value(v: &Version): u64 { v.value }
-
-    public fun upgrade(_: &VersionCap, v: &mut Version) {
+    public entry fun upgrade(_: &VersionCap, v: &mut Version) {
         v.value = CURRENT_VERSION + 1;
     }
+
+    public fun value(v: &Version): u64 { v.value }
 
     public fun is_current_version(v: &Version): bool {
         v.value == CURRENT_VERSION
