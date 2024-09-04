@@ -8,6 +8,10 @@ export const getSignerByPrivateKey = (privateKey) => {
   });
 };
 
+export const sleep = (delay) => {
+  return new Promise((resolve) => setTimeout(resolve, delay));
+};
+
 export const NFT_NAME = "EnsoFi Early Contributor Pass";
 export const NFT_SYMBOL = "ENSO";
 export const NFT_DESCRIPTION =

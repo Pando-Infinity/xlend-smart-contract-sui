@@ -19,17 +19,24 @@ import {
   NFT_NAME,
   NFT_SYMBOL,
   getSignerByPrivateKey,
+  sleep,
 } from "./common.js";
-import { createObjectCsvWriter } from 'csv-writer';
-import * as path from 'path';
+import { createObjectCsvWriter } from "csv-writer";
+import * as path from "path";
 
-const csvWriter = createObjectCsvWriter({
-	path: 'distributed_nft_output.csv',
-	header: [
-		{ id: 'txHash', title: 'TxHash' },
-		{ id: 'addresses', title: 'Addresses' }, 
-	],
-	append: true,
+const distributedLogWriter = createObjectCsvWriter({
+  path: "distributed_nft_output.csv",
+  header: [
+    { id: "txHash", title: "TxHash" },
+    { id: "addresses", title: "Addresses" },
+  ],
+  append: true,
+});
+
+const errorWallets = createObjectCsvWriter({
+  path: "wallet_error_output.csv",
+  header: [{ id: "walletAddress", title: "walletAddress" }],
+  append: true,
 });
 
 const splitAddresses = (addresses) => {
@@ -74,13 +81,16 @@ const submitDistributeNFts = async (addresses) => {
     signer,
   });
   console.log({ response: res }, "Operator distribute NFTs to addressess");
-	const dataToWrite = [{
-		txHash: res.digest,
-		addresses,
-	}];
-	csvWriter.writeRecords(dataToWrite)
-	.then(() => console.log('Distribute NFTs result was written successfully'))
-	.catch((err) => console.log(err));
+  const dataToWrite = [
+    {
+      txHash: res.digest,
+      addresses,
+    },
+  ];
+  distributedLogWriter
+    .writeRecords(dataToWrite)
+    .then(() => console.log("Distribute NFTs result was written successfully"))
+    .catch((err) => console.error(err));
 };
 
 const distributeNFTs = async () => {
@@ -97,12 +107,29 @@ const distributeNFTs = async () => {
       console.log("Read distribute nfts csv file successfully");
       const chunkAddresses = splitAddresses(addresses);
       for (const chunk of chunkAddresses) {
-				try {
-					console.log(chunk);
-					await submitDistributeNFts(chunk);
-				} catch (err) {
-					console.log('Failed to distribute nfts to addresses:', chunk);
-				}
+        try {
+          console.log(chunk);
+          await submitDistributeNFts(chunk);
+          sleep(3000); // Sleep 3s
+        } catch (err) {
+          console.log("Failed to distribute nfts to addresses:", chunk, err);
+          const dataToWrite = [
+            {
+              txHash: `Error ${err.message}`,
+              addresses: chunk,
+            },
+          ];
+
+          distributedLogWriter
+            .writeRecords(dataToWrite)
+            .then(() => console.log("Write error log done"))
+            .catch((err) => console.error(err));
+
+          errorWallets
+            .writeRecords(chunk.map((walletAddress) => ({ walletAddress })))
+            .then(() => console.log("Write error log done"))
+            .catch((err) => console.error(err));
+        }
       }
     });
 };
