@@ -56,6 +56,6 @@ module nft_contract::collection {
         let display = display::new_with_fields<Collection>(
             publisher, keys, values, ctx,
         );
-        transfer::public_transfer(display, ctx.sender());
+        transfer::public_transfer(display, @admin);
     }
 }
