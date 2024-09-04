@@ -11,7 +11,7 @@ module nft_contract::collection {
 
     const NAME: vector<u8> = b"EnsoFi Early Contributor Pass";
     const SYMBOL: vector<u8> = b"ENSO";
-    const IMAGE_URL: vector<u8> = b"ipfs://QmWrGHaXhMXZndpGwZWs1g8iCHPx6xZtDkkqwts2GDEvkN";
+    const IMAGE_URL: vector<u8> = b"https://blush-deep-leech-408.mypinata.cloud/ipfs/QmV2bapSygGLsF8xTQYcQfa5f2PriNVV2SqJbAGupy42s3";
     const PROJECT_URL: vector<u8> = b"https://app.ensofi.xyz";
 
     public struct Collection has key, store {
