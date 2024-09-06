@@ -10,17 +10,23 @@ import {
   CONFIGURATION,
   USDC_PRICE_FEED_ID,
   SUI_PRICE_FEED_ID,
+  SUI_COLLATERAL_COIN_TYPE,
 } from "./environment.js";
 import { getSignerByPrivateKey } from "./common.js";
 
-const addConfigurationToken = async (coinSymbol, isLendToken, priceFeedId) => {
+const addConfigurationToken = async (
+  coinSymbol,
+  isLendToken,
+  priceFeedId,
+  coinType
+) => {
   const suiClient = new SuiClient({ url: RPC_URL });
   const signer = getSignerByPrivateKey(OPERATOR_PRIVATE_KEY);
 
   const tx = new TransactionBlock();
   tx.moveCall({
     target: `${UPGRADED_PACKAGE}::operator::add_configuration_token`,
-    typeArguments: [LEND_COIN_TYPE],
+    typeArguments: [coinType],
     arguments: [
       tx.object(OPERATOR_CAP),
       tx.object(VERSION),
@@ -40,8 +46,13 @@ const addConfigurationToken = async (coinSymbol, isLendToken, priceFeedId) => {
 };
 
 const main = async () => {
-  await addConfigurationToken("USDC", true, USDC_PRICE_FEED_ID);
-  await addConfigurationToken("SUI", false, SUI_PRICE_FEED_ID);
+  await addConfigurationToken("USDC", true, USDC_PRICE_FEED_ID, LEND_COIN_TYPE);
+  await addConfigurationToken(
+    "SUI",
+    false,
+    SUI_PRICE_FEED_ID,
+    SUI_COLLATERAL_COIN_TYPE
+  );
 };
 
 main();
