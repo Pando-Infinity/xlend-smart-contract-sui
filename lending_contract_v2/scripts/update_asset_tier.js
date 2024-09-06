@@ -4,13 +4,13 @@ import { RPC_URL, VERSION, OPERATOR_PRIVATE_KEY, UPGRADED_PACKAGE, LEND_COIN_TYP
 import { getSignerByPrivateKey } from './common.js';
 
 const names = [
-    "asset_tier_sui_1",
-    "asset_tier_sui_2", 
-    "asset_tier_sui_5", 
-    "asset_tier_sui_10", 
-    "asset_tier_sui_20", 
-    "asset_tier_sui_50", 
-    "asset_tier_sui_100"
+    "asset_tier_sui_100",
+    "asset_tier_sui_200", 
+    "asset_tier_sui_500", 
+    "asset_tier_sui_1000", 
+    "asset_tier_sui_2000", 
+    "asset_tier_sui_5000", 
+    "asset_tier_sui_10000"
 ];
 const amounts = [
     1000000,
@@ -21,7 +21,6 @@ const amounts = [
     50000000,
     100000000,
 ];
-
 const duration = 1209600;
 
 const initAssetTier = async () => {
@@ -31,7 +30,7 @@ const initAssetTier = async () => {
     const tx = new TransactionBlock();
     for (let i = 0; i < names.length; i++) {
         tx.moveCall({
-            target: `${UPGRADED_PACKAGE}::operator::init_asset_tier`,
+            target: `${UPGRADED_PACKAGE}::operator::update_asset_tier`,
             typeArguments: [LEND_COIN_TYPE],
             arguments: [
                 tx.object(OPERATOR_CAP),
@@ -48,7 +47,7 @@ const initAssetTier = async () => {
         signer,
     });
 
-    console.log({ response: res }, 'Init asset tier');
+    console.log({ response: res }, 'Update asset tier');
 }
 
 initAssetTier()

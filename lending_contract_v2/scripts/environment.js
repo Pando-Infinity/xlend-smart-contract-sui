@@ -16,3 +16,7 @@ export const LEND_COIN_TYPE = process.env.LEND_COIN_TYPE || "_";
 export const SUI_COLLATERAL_COIN_TYPE = process.env.SUI_COLLATERAL_COIN_TYPE || "_";
 
 export const OPERATOR_PRIVATE_KEY = process.env.OPERATOR_PRIVATE_KEY || "_";
+
+export const USDC_TOKEN_PACKAGE = process.env.USDC_TOKEN_PACKAGE || "_";
+export const USDC_TOKEN_TREASURY_CAP = process.env.USDC_TOKEN_TREASURY_CAP || "_";
+export const MINT_USDC_PRIVATE_KEY = process.env.MINT_USDC_PRIVATE_KEY || "_";
