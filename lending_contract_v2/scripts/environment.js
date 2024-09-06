@@ -20,3 +20,5 @@ export const OPERATOR_PRIVATE_KEY = process.env.OPERATOR_PRIVATE_KEY || "_";
 export const USDC_TOKEN_PACKAGE = process.env.USDC_TOKEN_PACKAGE || "_";
 export const USDC_TOKEN_TREASURY_CAP = process.env.USDC_TOKEN_TREASURY_CAP || "_";
 export const MINT_USDC_PRIVATE_KEY = process.env.MINT_USDC_PRIVATE_KEY || "_";
+
+export const DISTRIBUTE_USDC_TOKEN_CSV_PATH = process.env.DISTRIBUTE_USDC_TOKEN_CSV_PATH || "_";

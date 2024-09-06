@@ -1,14 +1,48 @@
 import { SuiClient } from '@mysten/sui.js/client';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { getSignerByPrivateKey } from './common';
-import { MINT_USDC_PRIVATE_KEY, USDC_TOKEN_PACKAGE, USDC_TOKEN_TREASURY_CAP } from './environment';
+import { DISTRIBUTE_USDC_TOKEN_CSV_PATH, MINT_USDC_PRIVATE_KEY, USDC_TOKEN_PACKAGE, USDC_TOKEN_TREASURY_CAP } from './environment';
+import fs from "fs";
+import csvParser from "csv-parser";
+import { createObjectCsvWriter } from "csv-writer";
 
-const amount = 0;
-const receivers = ['', ''];
+const distributedLogWriter = createObjectCsvWriter({
+  path: "distributed_usdc_token_output.csv",
+  header: [
+    { id: "txHash", title: "TxHash" },
+    { id: "addresses", title: "Addresses" },
+  ],
+  append: true,
+});
 
-const mintUsdcToken = async () => {
+const errorWallets = createObjectCsvWriter({
+  path: "wallet_error_output.csv",
+  header: [{ id: "walletAddress", title: "walletAddress" }],
+  append: true,
+});
+
+const splitAddresses = (addresses) => {
+  const chunkAddresses = addresses.reduce((chunk, item, index) => {
+    const chunkIndex = Math.floor(index / PER_CHUNK);
+
+    if (!chunk[chunkIndex]) {
+      chunk[chunkIndex] = [];
+    }
+
+    chunk[chunkIndex].push(item);
+
+    return chunk;
+  }, []);
+  return chunkAddresses;
+};
+
+
+const mintUsdcToken = async (receivers) => {
 	const suiClient = new SuiClient({ url: RPC_URL });
   const signer = getSignerByPrivateKey(MINT_USDC_PRIVATE_KEY);
+
+	//TODO: update this
+	const mintAmount = 0;
 
 	const tx = new TransactionBlock();
 	const funcTarget = `${USDC_TOKEN_PACKAGE}::usdc::mint`
@@ -17,7 +51,7 @@ const mintUsdcToken = async () => {
 			target: funcTarget,
 			arguments: [
 				tx.object(USDC_TOKEN_TREASURY_CAP),
-				tx.pure.u64(amount),
+				tx.pure.u64(mintAmount),
 				tx.pure.address(receiver),
 			]
 		})
@@ -31,4 +65,45 @@ const mintUsdcToken = async () => {
 	console.log({ response: res }, 'Mint usdc token');
 }
 
-mintUsdcToken();
+const distributeUsdcToken = async () => {
+  const receivers = [];
+  fs.createReadStream(DISTRIBUTE_USDC_TOKEN_CSV_PATH)
+    .pipe(csvParser())
+    .on("error", (err) => {
+      console.error("Error while reading CSV file:", err);
+    })
+    .on("data", (row) => {
+      receivers.push(row.walletAddress);
+    })
+    .on("end", async () => {
+      console.log("Read distribute usdc token csv file successfully");
+      const chunkAddresses = splitAddresses(receivers);
+      for (const chunk of chunkAddresses) {
+        try {
+          console.log(chunk);
+          await mintUsdcToken(chunk);
+          sleep(3000); // Sleep 3s
+        } catch (err) {
+          console.log("Failed to distribute usdc token to addresses:", chunk, err);
+          const dataToWrite = [
+            {
+              txHash: `Error ${err.message}`,
+              addresses: chunk,
+            },
+          ];
+
+          distributedLogWriter
+            .writeRecords(dataToWrite)
+            .then(() => console.log("Write error log done"))
+            .catch((err) => console.error(err));
+
+          errorWallets
+            .writeRecords(chunk.map((walletAddress) => ({ walletAddress })))
+            .then(() => console.log("Write error log done"))
+            .catch((err) => console.error(err));
+        }
+      }
+    });
+};
+
+distributeUsdcToken();
