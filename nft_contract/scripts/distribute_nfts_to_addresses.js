@@ -22,6 +22,7 @@ import {
   sleep,
 } from "./common.js";
 import { createObjectCsvWriter } from "csv-writer";
+import { isValidSuiAddress } from "@mysten/sui.js/utils";
 import * as path from "path";
 
 const distributedLogWriter = createObjectCsvWriter({
@@ -35,6 +36,12 @@ const distributedLogWriter = createObjectCsvWriter({
 
 const errorWallets = createObjectCsvWriter({
   path: "wallet_error_output.csv",
+  header: [{ id: "walletAddress", title: "walletAddress" }],
+  append: true,
+});
+
+const invalidWallets = createObjectCsvWriter({
+  path: "wallet_invalid_output.csv",
   header: [{ id: "walletAddress", title: "walletAddress" }],
   append: true,
 });
@@ -101,7 +108,15 @@ const distributeNFTs = async () => {
       console.error("Error while reading CSV file:", err);
     })
     .on("data", (row) => {
-      addresses.push(row.walletAddress);
+      if (isValidSuiAddress(row.walletAddress)) {
+        addresses.push(row.walletAddress);
+      } else {
+        console.log("Invalid address:", row.walletAddress);
+        invalidWallets
+          .writeRecords([{ walletAddress: row.walletAddress }])
+          .then(() => console.log("Write invalid address log done"))
+          .catch((err) => console.error(err));
+      }
     })
     .on("end", async () => {
       console.log("Read distribute nfts csv file successfully");

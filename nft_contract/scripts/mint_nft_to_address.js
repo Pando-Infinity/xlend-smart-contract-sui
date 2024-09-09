@@ -15,38 +15,50 @@ import {
   NFT_NAME,
   NFT_SYMBOL,
   getSignerByPrivateKey,
+  sleep,
 } from "./common.js";
 
 const RECEIVER =
-  "0x617ce17e18de5d44e43af3a3a3e2bec0c45812d4fb9ba0da7bb95b9fd7e150fe";
+  "0xdfda63ad61f8ad5176c1107cb4a8377e3da14221221c3890d7f5a71a800dbbff";
+const TOTAL_MINT = 1900;
+const PER_MINT = 20;
 
 export const mint_nft_to_address = async () => {
   const suiClient = new SuiClient({ url: RPC_URL });
   const signer = getSignerByPrivateKey(OPERATOR_PRIVATE_KEY);
 
-  const tx = new TransactionBlock();
-  const functionTarget = `${UPGRADED_PACKAGE}::operator::mint_nft_to_address`;
-  tx.moveCall({
-    target: functionTarget,
-    arguments: [
-      tx.object(OPERATOR_CAP),
-      tx.object(VERSION),
-      tx.pure.string(NFT_NAME),
-      tx.pure.string(NFT_SYMBOL),
-      tx.pure.string(NFT_DESCRIPTION),
-      tx.pure.string(NFT_IMAGE_URL),
-      tx.pure(NFT_ATTRIBUTE_KEYS),
-      tx.pure(NFT_ATTRIBUTE_VALUES),
-      tx.pure.address(RECEIVER),
-    ],
-  });
-
-  const res = await suiClient.signAndExecuteTransactionBlock({
-    transactionBlock: tx,
-    signer,
-  });
-
-  console.log({ response: res }, "Mint Nft to address");
+  let totalMinted = 0;
+  while (totalMinted < TOTAL_MINT) {
+    try {
+      const tx = new TransactionBlock();
+      const functionTarget = `${UPGRADED_PACKAGE}::operator::mint_nft_to_address`;
+      for (let i = 0; i < PER_MINT; i++) {
+        tx.moveCall({
+          target: functionTarget,
+          arguments: [
+            tx.object(OPERATOR_CAP),
+            tx.object(VERSION),
+            tx.pure.string(NFT_NAME),
+            tx.pure.string(NFT_SYMBOL),
+            tx.pure.string(NFT_DESCRIPTION),
+            tx.pure.string(NFT_IMAGE_URL),
+            tx.pure(NFT_ATTRIBUTE_KEYS),
+            tx.pure(NFT_ATTRIBUTE_VALUES),
+            tx.pure.address(RECEIVER),
+          ],
+        });
+      }
+      const res = await suiClient.signAndExecuteTransactionBlock({
+        transactionBlock: tx,
+        signer,
+      });
+      totalMinted += PER_MINT;
+      console.log(`Minted ${totalMinted} NFTs`);
+    } catch (err) {
+      console.log(`Failed to mint NFTs: ${err}`);
+    }
+    sleep(2000);
+  }
 };
 
 mint_nft_to_address();
