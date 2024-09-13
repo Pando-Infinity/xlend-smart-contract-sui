@@ -22,7 +22,7 @@ const RECEIVER = "";
 const TOTAL_MINT = 1;
 const PER_MINT = 1;
 
-export const mint_nft_to_address = async () => {
+export const mint_nft_to_kiosk = async () => {
   const suiClient = new SuiClient({ url: RPC_URL });
   const signer = getSignerByPrivateKey(OPERATOR_PRIVATE_KEY);
 
@@ -30,7 +30,7 @@ export const mint_nft_to_address = async () => {
   while (totalMinted < TOTAL_MINT) {
     try {
       const tx = new TransactionBlock();
-      const functionTarget = `${UPGRADED_PACKAGE}::operator::mint_nft_to_address`;
+      const functionTarget = `${UPGRADED_PACKAGE}::operator::mint_nft_to_kiosk`;
       for (let i = 0; i < PER_MINT; i++) {
         tx.moveCall({
           target: functionTarget,
@@ -60,4 +60,4 @@ export const mint_nft_to_address = async () => {
   }
 };
 
-mint_nft_to_address();
+mint_nft_to_kiosk();
