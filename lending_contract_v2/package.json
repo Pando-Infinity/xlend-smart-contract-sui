@@ -16,6 +16,7 @@
     "@pythnetwork/pyth-sui-js": "^2.0.0",
     "csv": "^0.3.7",
     "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0",
     "dotenv": "^16.3.1",
     "fs": "^0.0.1-security",
     "path": "^0.12.7",

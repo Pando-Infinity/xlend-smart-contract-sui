@@ -8,4 +8,4 @@ Pyth = { git = "https://github.com/pyth-network/pyth-crosschain.git", subdir = "
 [addresses]
 lending_contract_v2 = "0x0"
 admin = "0x8b0447dbf083b3f713e09470b70f001c7da3b74c20acc037a5568ed5246f3786"
-operator = "0x52b08f02d3fc4e536dc02513dc2cd8a9d17702515afd516cc73c042879080278"
+operator = "0x9f6f133896d17d07aeb229ecf8ddf87d6d1839bcaacd5e47f4ae94c6d9ee5c14"
