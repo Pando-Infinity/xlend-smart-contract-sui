@@ -37,4 +37,6 @@ export const LENDER_FEE_PERCENT = 500;
 export const BORROWER_FEE_PERCENT = 500;
 export const MAX_OFFER_INTEREST = 20000; //200%
 
-export const DISTRIBUTE_USDC_TOKEN_CSV_PATH = process.env.DISTRIBUTE_USDC_TOKEN_CSV_PATH || "_";
+export const DISTRIBUTE_USDC_TOKEN_CSV_PATH =
+  process.env.DISTRIBUTE_USDC_TOKEN_CSV_PATH || "_";
+export const PER_CHUNK = parseInt(process.env.PER_CHUNK);

@@ -1,7 +1,14 @@
-import { SuiClient } from '@mysten/sui.js/client';
-import { TransactionBlock } from '@mysten/sui.js/transactions';
-import { getSignerByPrivateKey } from './common';
-import { DISTRIBUTE_USDC_TOKEN_CSV_PATH, MINT_USDC_PRIVATE_KEY, USDC_TOKEN_PACKAGE, USDC_TOKEN_TREASURY_CAP } from './environment';
+import { SuiClient } from "@mysten/sui.js/client";
+import { TransactionBlock } from "@mysten/sui.js/transactions";
+import { getSignerByPrivateKey, sleep } from "./common.js";
+import {
+  DISTRIBUTE_USDC_TOKEN_CSV_PATH,
+  MINT_USDC_PRIVATE_KEY,
+  USDC_TOKEN_PACKAGE,
+  USDC_TOKEN_TREASURY_CAP,
+  PER_CHUNK,
+  RPC_URL,
+} from "./environment.js";
 import fs from "fs";
 import csvParser from "csv-parser";
 import { createObjectCsvWriter } from "csv-writer";
@@ -36,34 +43,33 @@ const splitAddresses = (addresses) => {
   return chunkAddresses;
 };
 
-
 const mintUsdcToken = async (receivers) => {
-	const suiClient = new SuiClient({ url: RPC_URL });
+  const suiClient = new SuiClient({ url: RPC_URL });
   const signer = getSignerByPrivateKey(MINT_USDC_PRIVATE_KEY);
 
-	//TODO: update this
-	const mintAmount = 0;
+  //TODO: update this
+  const mintAmount = 5000000000000;
 
-	const tx = new TransactionBlock();
-	const funcTarget = `${USDC_TOKEN_PACKAGE}::usdc::mint`
-	for (const receiver of receivers) {
-		tx.moveCall({
-			target: funcTarget,
-			arguments: [
-				tx.object(USDC_TOKEN_TREASURY_CAP),
-				tx.pure.u64(mintAmount),
-				tx.pure.address(receiver),
-			]
-		})
-	}
+  const tx = new TransactionBlock();
+  const funcTarget = `${USDC_TOKEN_PACKAGE}::usdc::mint`;
+  for (const receiver of receivers) {
+    tx.moveCall({
+      target: funcTarget,
+      arguments: [
+        tx.object(USDC_TOKEN_TREASURY_CAP),
+        tx.pure.u64(mintAmount),
+        tx.pure.address(receiver),
+      ],
+    });
+  }
 
-	const res = await suiClient.signAndExecuteTransactionBlock({
-		transactionBlock: tx,
-		signer,
-	});
+  const res = await suiClient.signAndExecuteTransactionBlock({
+    transactionBlock: tx,
+    signer,
+  });
 
-	console.log({ response: res }, 'Mint usdc token');
-}
+  console.log({ response: res }, "Mint usdc token");
+};
 
 const distributeUsdcToken = async () => {
   const receivers = [];
@@ -84,7 +90,11 @@ const distributeUsdcToken = async () => {
           await mintUsdcToken(chunk);
           sleep(3000); // Sleep 3s
         } catch (err) {
-          console.log("Failed to distribute usdc token to addresses:", chunk, err);
+          console.log(
+            "Failed to distribute usdc token to addresses:",
+            chunk,
+            err
+          );
           const dataToWrite = [
             {
               txHash: `Error ${err.message}`,
