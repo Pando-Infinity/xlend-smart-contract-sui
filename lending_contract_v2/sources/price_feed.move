@@ -20,6 +20,19 @@ module lending_contract_v2::price_feed {
     use fun std::string::from_ascii as std::ascii::String.to_string;
     use fun pyth::price_info::get_price_info_from_price_info_object as PriceInfoObject.to_price_info;
 
+    public fun get_price(
+        price_info_object: &PriceInfoObject,
+        time_threshold: u64,
+        clock: &Clock,
+    ): (u64, u64, bool) {
+        let price: Price = get_price_no_older_than(price_info_object, clock, time_threshold);
+        let price_u64 = price.get_price().to_u64();
+        let exponent_u64 = price.get_expo().to_u64();
+        let is_negative = price.get_expo().is_negative();
+
+        (price_u64, exponent_u64, is_negative)
+    }
+
     public fun get_value_by_usd<T>(
         price_info_object: &PriceInfoObject,
         max_decimals: u64,
@@ -32,13 +45,11 @@ module lending_contract_v2::price_feed {
         // Standardized amount to max decimals
         let amount_by_max_decimals = (amount as u128) * (utils::power(10, max_decimals) as u128) / (utils::power(10, (coin_decimals_u8 as u64)) as u128);
 
-        let price: Price = get_price_no_older_than(price_info_object, clock, time_threshold);
-        let price_u64 = price.get_price().to_u64();
-        let exponent_u64 = price.get_expo().to_u64();
-        let exponent_power = (utils::power(10, exponent_u64) as u128);
         let value_usd: u128;
+        let (price_u64, exponent_u64, is_negative) = get_price(price_info_object, time_threshold, clock);
+        let exponent_power = (utils::power(10, exponent_u64) as u128);
 
-        if (price.get_expo().is_negative()) {
+        if (is_negative) {
             value_usd = (price_u64 as u128) * amount_by_max_decimals / exponent_power;
         } else {
             value_usd = (price_u64 as u128) * amount_by_max_decimals * exponent_power;
