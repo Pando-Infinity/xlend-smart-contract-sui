@@ -1,7 +1,9 @@
 module lending_contract_v2::operator {
     use std::string::String;
-    use sui::coin::Coin;
-            
+    use sui::coin::{Coin, CoinMetadata};
+    use sui::clock::Clock;
+
+    use pyth::price_info::PriceInfoObject;    
     use lending_contract_v2::{
         version::{Version},
         configuration::{Self, Configuration},
@@ -13,9 +15,14 @@ module lending_contract_v2::operator {
         loan_registry::{Self, Loan, LoanKey},
         utils,
     };
+    use fun lending_contract_v2::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
 
     const ENotFoundOfferToCancel: u64 = 1;
     const ELoanNotFound: u64 = 2;
+    const EPriceInfoObjectLendingIsInvalid: u64 = 3;
+    const EPriceInfoObjectCollateralIsInvalid: u64 = 4;
+    const ELendCoinIsInvalid: u64 = 5;
+    const ECollateralCoinIsInvalid: u64 = 6;
 
     public struct OperatorCap has key, store {
         id: UID
@@ -276,6 +283,42 @@ module lending_contract_v2::operator {
             liquidating_price,
             liquidating_at,
             configuration.hot_wallet(),
+            ctx,
+        );
+    }
+
+    public entry fun start_liquidate_loan_offer_health<LendCoinType, CollateralCoinType>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
+        lend_coin_metadata: &CoinMetadata<LendCoinType>,
+        collateral_coin_metadata: &CoinMetadata<CollateralCoinType>,
+        price_info_object_lending: &PriceInfoObject,
+        price_info_object_collateral: &PriceInfoObject,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        version.assert_current_version();
+
+        assert!(configuration.is_valid_lend_coin<LendCoinType>(), ELendCoinIsInvalid);
+        assert!(configuration.is_valid_collateral_coin<CollateralCoinType>(), ECollateralCoinIsInvalid);
+        assert!(price_info_object_lending.is_valid<LendCoinType>(configuration, lend_coin_metadata), EPriceInfoObjectLendingIsInvalid);
+        assert!(price_info_object_collateral.is_valid<CollateralCoinType>(configuration, collateral_coin_metadata), EPriceInfoObjectCollateralIsInvalid);
+
+        let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
+        assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
+        let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
+
+        loan.start_liquidate_loan_offer_health<LendCoinType, CollateralCoinType>(
+            configuration,
+            lend_coin_metadata,
+            collateral_coin_metadata,
+            price_info_object_lending,
+            price_info_object_collateral,
+            configuration.hot_wallet(),
+            clock,
             ctx,
         );
     }
