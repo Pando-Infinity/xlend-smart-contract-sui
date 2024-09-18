@@ -263,30 +263,6 @@ module lending_contract_v2::operator {
         );
     }
 
-    public entry fun start_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
-        _: &OperatorCap,
-        version: &Version,
-        configuration: &Configuration,
-        state: &mut State,
-        loan_id: ID,
-        liquidating_price: u64,
-        liquidating_at: u64,
-        ctx: &mut TxContext,
-    ) {
-        version.assert_current_version();
-
-        let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
-        assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
-        let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
-
-        loan.start_liquidate_loan_offer(
-            liquidating_price,
-            liquidating_at,
-            configuration.hot_wallet(),
-            ctx,
-        );
-    }
-
     public entry fun start_liquidate_loan_offer_health<LendCoinType, CollateralCoinType>(
         _: &OperatorCap,
         version: &Version,
@@ -320,6 +296,28 @@ module lending_contract_v2::operator {
             configuration.hot_wallet(),
             clock,
             ctx,
+        );
+    }
+
+    public entry fun start_liquidate_loan_offer_expired<LendCoinType, CollateralCoinType>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &Configuration,
+        state: &mut State,
+        loan_id: ID,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        version.assert_current_version();
+
+        let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
+        assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
+        let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);      
+
+        loan.start_liquidate_loan_offer_expired<LendCoinType, CollateralCoinType>(
+            configuration.hot_wallet(),
+            clock,
+            ctx
         );
     }
 

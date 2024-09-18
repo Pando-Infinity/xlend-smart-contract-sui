@@ -28,6 +28,7 @@ module lending_contract_v2::loan_registry {
     const EInvalidCoinInput: u64 = 8;
     const ECollateralIsInsufficient: u64 = 9;
     const ECanNotLiquidateValidCollateral: u64 = 10;
+    const ECanNotLiquidateUnexpiredLoan: u64 = 11;
 
     const MATCHED_STATUS: vector<u8> = b"Matched";
     const FUND_TRANSFERRED_STATUS: vector<u8> = b"FundTransferred";
@@ -388,41 +389,6 @@ module lending_contract_v2::loan_registry {
         });
     }
 
-        public(package) fun start_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
-        loan: &mut Loan<LendCoinType, CollateralCoinType>,
-        liquidating_price: u64,
-        liquidating_at: u64,
-        hot_wallet: address,
-        ctx: &mut TxContext,
-    ) {
-        assert!(loan.status == FUND_TRANSFERRED_STATUS.to_string(), EInvalidLoanStatus);
-
-        if (loan.liquidation.is_none()) {
-            loan.liquidation = option::some<Liquidation<LendCoinType, CollateralCoinType>>(Liquidation {
-                liquidating_at,
-                liquidating_price,
-                liquidated_tx: option::none<String>(),
-                liquidated_price: option::none<u64>(),
-            });
-        } else {
-            let liquidation = loan.liquidation.borrow_mut();
-            liquidation.liquidating_at = liquidating_at;
-            liquidation.liquidating_price = liquidating_price;
-        };
-
-        let collateral_amount = loan.collateral.value<CollateralCoinType>();
-        let collateral_coin = loan.collateral.split<CollateralCoinType>(collateral_amount).to_coin(ctx);
-        transfer::public_transfer(collateral_coin, hot_wallet);
-
-        loan.status = LIQUIDATING_STATUS.to_string();
-
-        event::emit(LiquidatingCollateralEvent {
-            loan_id: object::id(loan),
-            liquidating_price,
-            liquidating_at,
-        });
-    }
-
     public(package) fun start_liquidate_loan_offer_health<LendCoinType, CollateralCoinType>(
         loan: &mut Loan<LendCoinType, CollateralCoinType>,
         configuration: &Configuration,
@@ -448,30 +414,31 @@ module lending_contract_v2::loan_registry {
         ), ECanNotLiquidateValidCollateral);
 
         let (liquidating_price, _, _) = price_info_object_collateral.get_price(configuration.price_time_threshold(), clock);
-        if (loan.liquidation.is_none()) {
-            loan.liquidation = option::some<Liquidation<LendCoinType, CollateralCoinType>>(Liquidation {
-                liquidating_at: current_timestamp,
-                liquidating_price,
-                liquidated_tx: option::none<String>(),
-                liquidated_price: option::none<u64>(),
-            });
-        } else {
-            let liquidation = loan.liquidation.borrow_mut();
-            liquidation.liquidating_at = current_timestamp;
-            liquidation.liquidating_price = liquidating_price;
-        };
-
-        let collateral_amount = loan.collateral.value<CollateralCoinType>();
-        let collateral_coin = loan.collateral.split<CollateralCoinType>(collateral_amount).to_coin(ctx);
-        transfer::public_transfer(collateral_coin, hot_wallet);
-
-        loan.status = LIQUIDATING_STATUS.to_string();
-
-        event::emit(LiquidatingCollateralEvent {
-            loan_id: object::id(loan),
+        
+        loan.start_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
             liquidating_price,
-            liquidating_at: current_timestamp,
-        });
+            current_timestamp,
+            hot_wallet,
+            ctx,
+        );
+    }
+
+    public(package) fun start_liquidate_loan_offer_expired<LendCoinType, CollateralCoinType>(
+        loan: &mut Loan<LendCoinType, CollateralCoinType>,
+        hot_wallet: address,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let current_timestamp = clock.timestamp_ms();
+        assert!(loan.status == FUND_TRANSFERRED_STATUS.to_string(), EInvalidLoanStatus);
+        assert!(loan.is_expired_loan_offer<LendCoinType, CollateralCoinType>(current_timestamp), ECanNotLiquidateUnexpiredLoan);
+        
+        loan.start_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
+            0,
+            current_timestamp,
+            hot_wallet,
+            ctx,
+        );
     }
 
     public(package) fun system_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
@@ -559,9 +526,50 @@ module lending_contract_v2::loan_registry {
         current_health_ratio >= (configuration.min_health_ratio() as u128)
     }
 
+    public fun is_expired_loan_offer<LendCoinType, CollateralCoinType>(
+        loan: &Loan<LendCoinType, CollateralCoinType>,
+        current_timestamp: u64,
+    ): bool {
+        let end_borrowed_loan =  loan.start_timestamp + loan.duration;
+        current_timestamp >= end_borrowed_loan
+    }
+
     public fun offer_id<LendCoinType, CollateralCoinType>(
         loan: &Loan<LendCoinType, CollateralCoinType>
     ): ID {
         loan.offer_id
+    }
+
+    fun start_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
+        loan: &mut Loan<LendCoinType, CollateralCoinType>,
+        liquidating_price: u64,
+        liquidating_at: u64,
+        hot_wallet: address,
+        ctx: &mut TxContext,
+    ) {
+        if (loan.liquidation.is_none()) {
+            loan.liquidation = option::some<Liquidation<LendCoinType, CollateralCoinType>>(Liquidation {
+                liquidating_at,
+                liquidating_price,
+                liquidated_tx: option::none<String>(),
+                liquidated_price: option::none<u64>(),
+            });
+        } else {
+            let liquidation = loan.liquidation.borrow_mut();
+            liquidation.liquidating_at = liquidating_at;
+            liquidation.liquidating_price = liquidating_price;
+        };
+
+        let collateral_amount = loan.collateral.value<CollateralCoinType>();
+        let collateral_coin = loan.collateral.split<CollateralCoinType>(collateral_amount).to_coin(ctx);
+        transfer::public_transfer(collateral_coin, hot_wallet);
+
+        loan.status = LIQUIDATING_STATUS.to_string();
+
+        event::emit(LiquidatingCollateralEvent {
+            loan_id: object::id(loan),
+            liquidating_price,
+            liquidating_at,
+        });
     }
 }
