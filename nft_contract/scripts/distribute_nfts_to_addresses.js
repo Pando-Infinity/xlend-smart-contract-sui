@@ -125,7 +125,7 @@ const distributeNFTs = async () => {
         try {
           console.log(chunk);
           await submitDistributeNFts(chunk);
-          sleep(3000); // Sleep 3s
+          await sleep(3000); // Sleep 3s
         } catch (err) {
           console.log("Failed to distribute nfts to addresses:", chunk, err);
           const dataToWrite = [

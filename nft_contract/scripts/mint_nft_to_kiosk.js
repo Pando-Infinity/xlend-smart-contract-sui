@@ -56,7 +56,7 @@ export const mint_nft_to_kiosk = async () => {
     } catch (err) {
       console.log(`Failed to mint NFTs: ${err}`);
     }
-    sleep(2000);
+    await sleep(2000);
   }
 };
 
