@@ -25,13 +25,19 @@ const distributedLogWriter = createObjectCsvWriter({
 
 const errorWallets = createObjectCsvWriter({
   path: "wallet_error_output.csv",
-  header: [{ id: "walletAddress", title: "walletAddress" }],
+  header: [
+    { id: "walletAddress", title: "walletAddress" },
+    { id: "quantity", title: "quantity" },
+  ],
   append: true,
 });
 
 const invalidWallets = createObjectCsvWriter({
   path: "wallet_invalid_output.csv",
-  header: [{ id: "walletAddress", title: "walletAddress" }],
+  header: [
+    { id: "walletAddress", title: "walletAddress" },
+    { id: "quantity", title: "quantity" },
+  ],
   append: true,
 });
 
@@ -54,9 +60,6 @@ const mintUsdcToken = async (receivers) => {
   const suiClient = new SuiClient({ url: RPC_URL });
   const signer = getSignerByPrivateKey(MINT_USDC_PRIVATE_KEY);
 
-  //TODO: update this
-  const mintAmount = 500000000;
-
   const tx = new TransactionBlock();
   const funcTarget = `${USDC_TOKEN_PACKAGE}::usdc::mint`;
   for (const receiver of receivers) {
@@ -64,8 +67,8 @@ const mintUsdcToken = async (receivers) => {
       target: funcTarget,
       arguments: [
         tx.object(USDC_TOKEN_TREASURY_CAP),
-        tx.pure.u64(mintAmount),
-        tx.pure.address(receiver),
+        tx.pure.u64(Number(receiver.quantity) * 1000000),
+        tx.pure.address(receiver.walletAddress),
       ],
     });
   }
@@ -86,13 +89,12 @@ const distributeUsdcToken = async () => {
       console.error("Error while reading CSV file:", err);
     })
     .on("data", (row) => {
-      receivers.push(row.walletAddress);
       if (isValidSuiAddress(row.walletAddress)) {
-        receivers.push(row.walletAddress);
+        receivers.push(row);
       } else {
         console.log("Invalid address:", row.walletAddress);
         invalidWallets
-          .writeRecords([{ walletAddress: row.walletAddress }])
+          .writeRecords([row])
           .then(() => console.log("Write invalid address log done"))
           .catch((err) => console.error(err));
       }
@@ -124,7 +126,7 @@ const distributeUsdcToken = async () => {
             .catch((err) => console.error(err));
 
           errorWallets
-            .writeRecords(chunk.map((walletAddress) => ({ walletAddress })))
+            .writeRecords(chunk)
             .then(() => console.log("Write error log done"))
             .catch((err) => console.error(err));
         }
