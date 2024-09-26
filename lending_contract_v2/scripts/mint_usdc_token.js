@@ -12,6 +12,7 @@ import {
 import fs from "fs";
 import csvParser from "csv-parser";
 import { createObjectCsvWriter } from "csv-writer";
+import { isValidSuiAddress } from "@mysten/sui.js/utils";
 
 const distributedLogWriter = createObjectCsvWriter({
   path: "distributed_usdc_token_output.csv",

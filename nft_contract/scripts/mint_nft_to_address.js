@@ -18,10 +18,9 @@ import {
   sleep,
 } from "./common.js";
 
-const RECEIVER =
-  "0x820c86b1d7e238771a1956d0fcd1ab9b1ba4e024488306a646cd5aabc6888888";
-const TOTAL_MINT = 20;
-const PER_MINT = 20;
+const RECEIVER = "";
+const TOTAL_MINT = 1;
+const PER_MINT = 1;
 
 export const mint_nft_to_address = async () => {
   const suiClient = new SuiClient({ url: RPC_URL });
