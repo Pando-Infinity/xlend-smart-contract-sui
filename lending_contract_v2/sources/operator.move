@@ -193,7 +193,6 @@ module lending_contract_v2::operator {
         _: &OperatorCap,
         version: &Version,
         state: &mut State,
-        configuration: &Configuration,
         offer_id: ID,
         lend_coin: Coin<T>,
         waiting_interest: Coin<T>,
@@ -214,7 +213,6 @@ module lending_contract_v2::operator {
     public entry fun system_fund_transfer<LendCoinType, CollateralCoinType>(
         _: &OperatorCap,
         version: &Version,
-        configuration: &Configuration,
         state: &mut State,
         loan_id: ID,
         lend_coin: Coin<LendCoinType>,
