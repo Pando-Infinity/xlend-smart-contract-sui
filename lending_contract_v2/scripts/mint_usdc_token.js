@@ -12,6 +12,7 @@ import {
 import fs from "fs";
 import csvParser from "csv-parser";
 import { createObjectCsvWriter } from "csv-writer";
+import { isValidSuiAddress } from "@mysten/sui.js/utils";
 
 const distributedLogWriter = createObjectCsvWriter({
   path: "distributed_usdc_token_output.csv",
@@ -24,6 +25,12 @@ const distributedLogWriter = createObjectCsvWriter({
 
 const errorWallets = createObjectCsvWriter({
   path: "wallet_error_output.csv",
+  header: [{ id: "walletAddress", title: "walletAddress" }],
+  append: true,
+});
+
+const invalidWallets = createObjectCsvWriter({
+  path: "wallet_invalid_output.csv",
   header: [{ id: "walletAddress", title: "walletAddress" }],
   append: true,
 });
@@ -48,7 +55,7 @@ const mintUsdcToken = async (receivers) => {
   const signer = getSignerByPrivateKey(MINT_USDC_PRIVATE_KEY);
 
   //TODO: update this
-  const mintAmount = 5000000000000;
+  const mintAmount = 500000000;
 
   const tx = new TransactionBlock();
   const funcTarget = `${USDC_TOKEN_PACKAGE}::usdc::mint`;
@@ -80,6 +87,15 @@ const distributeUsdcToken = async () => {
     })
     .on("data", (row) => {
       receivers.push(row.walletAddress);
+      if (isValidSuiAddress(row.walletAddress)) {
+        receivers.push(row.walletAddress);
+      } else {
+        console.log("Invalid address:", row.walletAddress);
+        invalidWallets
+          .writeRecords([{ walletAddress: row.walletAddress }])
+          .then(() => console.log("Write invalid address log done"))
+          .catch((err) => console.error(err));
+      }
     })
     .on("end", async () => {
       console.log("Read distribute usdc token csv file successfully");
@@ -88,7 +104,7 @@ const distributeUsdcToken = async () => {
         try {
           console.log(chunk);
           await mintUsdcToken(chunk);
-          sleep(3000); // Sleep 3s
+          await sleep(3000); // Sleep 3s
         } catch (err) {
           console.log(
             "Failed to distribute usdc token to addresses:",

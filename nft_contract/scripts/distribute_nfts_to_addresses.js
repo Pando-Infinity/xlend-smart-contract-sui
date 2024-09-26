@@ -109,7 +109,10 @@ const distributeNFTs = async () => {
     })
     .on("data", (row) => {
       if (isValidSuiAddress(row.walletAddress)) {
-        addresses.push(row.walletAddress);
+        const { walletAddress, quantity } = row;
+        for (let i = 0; i < quantity; i++) {
+          addresses.push(walletAddress);
+        }
       } else {
         console.log("Invalid address:", row.walletAddress);
         invalidWallets
@@ -125,7 +128,6 @@ const distributeNFTs = async () => {
         try {
           console.log(chunk);
           await submitDistributeNFts(chunk);
-          sleep(3000); // Sleep 3s
         } catch (err) {
           console.log("Failed to distribute nfts to addresses:", chunk, err);
           const dataToWrite = [
@@ -145,6 +147,7 @@ const distributeNFTs = async () => {
             .then(() => console.log("Write error log done"))
             .catch((err) => console.error(err));
         }
+        await sleep(3000); // Sleep 3s
       }
     });
 };
