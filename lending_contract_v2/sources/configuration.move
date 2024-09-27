@@ -22,7 +22,7 @@ module lending_contract_v2::configuration {
         max_offer_interest: u64,
         min_health_ratio: u64,
         hot_wallet: address,
-        price_time_threshold: u64,
+        max_price_age_seconds: u64,
         price_feed_ids:  Table<String, String>,
     }
 
@@ -32,7 +32,7 @@ module lending_contract_v2::configuration {
         max_offer_interest: u64,
         min_health_ratio: u64,
         hot_wallet: address,
-        price_time_threshold: u64,
+        max_price_age_seconds: u64,
         ctx: &mut TxContext,
     ) {
         let configuration = Configuration {
@@ -42,7 +42,7 @@ module lending_contract_v2::configuration {
             max_offer_interest,
             min_health_ratio,
             hot_wallet,
-            price_time_threshold,
+            max_price_age_seconds,
             price_feed_ids: table::new<String, String>(ctx),
         };
         transfer::public_share_object(configuration);
@@ -55,14 +55,14 @@ module lending_contract_v2::configuration {
         max_offer_interest: u64,
         min_health_ratio: u64,
         hot_wallet: address,
-        price_time_threshold: u64,
+        max_price_age_seconds: u64,
     ) {
         configuration.lender_fee_percent = lender_fee_percent;
         configuration.borrower_fee_percent = borrower_fee_percent;
         configuration.max_offer_interest = max_offer_interest;
         configuration.min_health_ratio = min_health_ratio; 
         configuration.hot_wallet = hot_wallet;
-        configuration.price_time_threshold = price_time_threshold;
+        configuration.max_price_age_seconds = max_price_age_seconds;
     }
 
     public(package) fun add<K: copy + drop + store, V: store>(
@@ -183,10 +183,10 @@ module lending_contract_v2::configuration {
         configuration.min_health_ratio
     }
 
-    public fun price_time_threshold (
+    public fun max_price_age_seconds (
         configuration: &Configuration
     ): u64 {
-        configuration.price_time_threshold
+        configuration.max_price_age_seconds
     }
 
     public fun price_feed_id(
