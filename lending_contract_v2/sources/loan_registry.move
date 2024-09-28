@@ -86,12 +86,10 @@ module lending_contract_v2::loan_registry {
         offer_id: ID,
         amount: u64,
         duration: u64,
-        // collateral_amount: u64, 
         lend_token: String,
         collateral_token: String,
         lender: address,
         borrower: address,
-        // start_timestamp: u64,
     }
 
     public struct BorrowerPaidEvent has copy, drop {
