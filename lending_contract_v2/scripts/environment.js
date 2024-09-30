@@ -28,7 +28,7 @@ export const MINT_USDC_PRIVATE_KEY = process.env.MINT_USDC_PRIVATE_KEY || "_";
 
 export const HOT_WALLET_ADDRESS = process.env.HOT_WALLET_ADDRESS || "_";
 export const MIN_HEALTH_RATIO = process.env.MIN_HEALTH_RATIO || 12000; // 120%
-export const PRICE_TIME_THRESHOLD = process.env.PRICE_TIME_THRESHOLD || 90; // 90 seconds
+export const MAX_PRICE_AGE_SECONDS = process.env.MAX_PRICE_AGE_SECONDS || 90; // 90 seconds
 
 export const USDC_PRICE_FEED_ID = process.env.USDC_PRICE_FEED_ID || "_";
 export const SUI_PRICE_FEED_ID = process.env.SUI_PRICE_FEED_ID || "_";

@@ -12,7 +12,7 @@ import {
   BORROWER_FEE_PERCENT,
   MAX_OFFER_INTEREST,
   MIN_HEALTH_RATIO,
-  PRICE_TIME_THRESHOLD,
+  MAX_PRICE_AGE_SECONDS,
 } from "./environment.js";
 import { getSignerByPrivateKey } from "./common.js";
 
@@ -32,7 +32,7 @@ const initSystem = async () => {
       tx.pure.u64(MAX_OFFER_INTEREST),
       tx.pure.u64(MIN_HEALTH_RATIO),
       tx.pure.address(HOT_WALLET_ADDRESS),
-      tx.pure.u64(PRICE_TIME_THRESHOLD),
+      tx.pure.u64(MAX_PRICE_AGE_SECONDS),
     ],
   });
 

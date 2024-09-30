@@ -86,12 +86,10 @@ module lending_contract_v2::loan_registry {
         offer_id: ID,
         amount: u64,
         duration: u64,
-        // collateral_amount: u64, 
         lend_token: String,
         collateral_token: String,
         lender: address,
         borrower: address,
-        // start_timestamp: u64,
     }
 
     public struct BorrowerPaidEvent has copy, drop {
@@ -413,7 +411,7 @@ module lending_contract_v2::loan_registry {
             clock,
         ), ECanNotLiquidateValidCollateral);
 
-        let (liquidating_price, _, _) = price_info_object_collateral.get_price(configuration.price_time_threshold(), clock);
+        let (liquidating_price, _, _) = price_info_object_collateral.get_price(configuration.max_price_age_seconds(), clock);
         
         loan.start_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
             liquidating_price,
@@ -511,14 +509,14 @@ module lending_contract_v2::loan_registry {
             max_decimals, 
             collateral_amount, 
             collateral_coin_metadata, 
-            configuration.price_time_threshold(),
+            configuration.max_price_age_seconds(),
             clock
         );
         let lend_value_by_usd = price_info_object_lending.get_value_by_usd<LendCoinType>(
             max_decimals, 
             lend_amount, 
             lend_coin_metadata, 
-            configuration.price_time_threshold(),
+            configuration.max_price_age_seconds(),
             clock
         );
         let current_health_ratio = (collateral_value_by_usd * (DEFAULT_RATE_FACTOR as u128)) / lend_value_by_usd;
