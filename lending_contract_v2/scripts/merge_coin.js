@@ -67,25 +67,31 @@ const burnCoin = async () => {
       const paginatedCoins = await suiClient.getAllCoins({
         owner: signer.getPublicKey().toSuiAddress(),
       });
+
       const coinsFiltered = paginatedCoins.data.filter(
         (coin) => coin.coinType === coinType
       );
+
       const coins = coinsFiltered.map((coin) => coin.coinObjectId);
-      const [destinationCoin, ...restCoin] = coins;
-      tx.mergeCoins(destinationCoin, restCoin);
 
-      const res = await suiClient.signAndExecuteTransactionBlock({
-        transactionBlock: tx,
-        signer,
-      });
+      if (coins.length > 1) {
+        console.log(coins);
+        const [destinationCoin, ...restCoin] = coins;
+        tx.mergeCoins(destinationCoin, restCoin);
 
-      console.log({ response: res }, "Merge Coins");
+        const res = await suiClient.signAndExecuteTransactionBlock({
+          transactionBlock: tx,
+          signer,
+        });
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
 
-      if (!paginatedCoins.hasNextPage) break;
+      cursor = paginatedCoins.nextCursor;
+
+      if (!paginatedCoins.hasNextPage || !cursor) break;
     } catch (err) {
-      console.log(err);
+      console.error(err);
       continue;
     }
   }
