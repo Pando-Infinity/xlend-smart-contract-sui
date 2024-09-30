@@ -1,4 +1,4 @@
-module lending_contract_v2::price_feed {
+module enso_lending::price_feed {
     use sui::{
         coin::CoinMetadata,
         clock::Clock,
@@ -9,14 +9,14 @@ module lending_contract_v2::price_feed {
         pyth::{get_price_no_older_than},
         price::Price,
     };
-    use lending_contract_v2::{
+    use enso_lending::{
         configuration::Configuration,
         utils,
     };
 
     use fun i64_to_u64 as I64.to_u64;
     use fun is_negative as I64.is_negative;
-    use fun lending_contract_v2::utils::vector_to_hex_char as vector.to_hex_char;
+    use fun enso_lending::utils::vector_to_hex_char as vector.to_hex_char;
     use fun std::string::from_ascii as std::ascii::String.to_string;
     use fun pyth::price_info::get_price_info_from_price_info_object as PriceInfoObject.to_price_info;
 

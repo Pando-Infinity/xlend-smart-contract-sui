@@ -1,4 +1,4 @@
-module lending_contract_v2::custodian {
+module enso_lending::custodian {
     use sui::{balance::{Self, Balance}};
 
     public struct Custodian<phantom T> has key, store {

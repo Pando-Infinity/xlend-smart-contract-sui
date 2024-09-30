@@ -1,7 +1,7 @@
-module lending_contract_v2::offer {
+module enso_lending::offer {
     use sui::coin::Coin;
     use std::string::String;
-    use lending_contract_v2::{
+    use enso_lending::{
         version::Version,
         configuration::Configuration,
         state::State,

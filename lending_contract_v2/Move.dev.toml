@@ -1,11 +1,12 @@
 [package]
-name = "lending_contract_v2"
+name = "enso_lending"
 edition = "2024.beta"
+published-at = "0x520f4b4782e57b11f52136f520f945d9009b8b1a1ba8cb629e49111b1974bc9a"
 
 [dependencies]
 Pyth = { git = "https://github.com/pyth-network/pyth-crosschain.git", subdir = "target_chains/sui/contracts", rev = "sui-contract-testnet" }
 
 [addresses]
-lending_contract_v2 = "0x0"
+enso_lending = "0x0"
 admin = "0x8b0447dbf083b3f713e09470b70f001c7da3b74c20acc037a5568ed5246f3786"
 operator = "0x52b08f02d3fc4e536dc02513dc2cd8a9d17702515afd516cc73c042879080278"

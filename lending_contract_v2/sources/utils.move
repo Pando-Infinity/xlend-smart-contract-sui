@@ -1,4 +1,4 @@
-module lending_contract_v2::utils {
+module enso_lending::utils {
     use std::{
         type_name,
         string::{Self, String}

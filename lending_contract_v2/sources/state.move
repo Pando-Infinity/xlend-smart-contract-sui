@@ -1,4 +1,4 @@
-module lending_contract_v2::state {
+module enso_lending::state {
     use sui::{
         dynamic_object_field as ofield,
         table::{Self, Table},

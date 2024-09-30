@@ -1,10 +1,10 @@
-module lending_contract_v2::operator {
+module enso_lending::operator {
     use std::string::String;
     use sui::coin::{Coin, CoinMetadata};
     use sui::clock::Clock;
 
     use pyth::price_info::PriceInfoObject;    
-    use lending_contract_v2::{
+    use enso_lending::{
         version::{Version},
         configuration::{Self, Configuration},
         custodian::Custodian,
@@ -15,7 +15,7 @@ module lending_contract_v2::operator {
         loan_registry::{Self, Loan, LoanKey},
         utils,
     };
-    use fun lending_contract_v2::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
+    use fun enso_lending::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
 
     const ENotFoundOfferToCancel: u64 = 1;
     const ELoanNotFound: u64 = 2;

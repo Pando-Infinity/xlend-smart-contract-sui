@@ -1,4 +1,4 @@
-module lending_contract_v2::offer_registry {
+module enso_lending::offer_registry {
     use sui::{
         coin::{Self, Coin},
         event,
