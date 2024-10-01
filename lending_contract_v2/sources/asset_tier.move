@@ -1,4 +1,4 @@
-module lending_contract_v2::asset_tier {
+module enso_lending::asset_tier {
     use sui::event;
     use std::string::String;
 

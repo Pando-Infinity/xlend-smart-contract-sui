@@ -1,7 +1,7 @@
-module lending_contract_v2::admin {
+module enso_lending::admin {
     use sui::balance::Balance;
 
-    use lending_contract_v2::{
+    use enso_lending::{
         version::Version,
         operator,
         custodian::Custodian,

@@ -12,16 +12,22 @@ import {
 import { getSignerByPrivateKey } from "./common.js";
 
 const names = [
-  "asset_tier_sui_1",
-  "asset_tier_sui_2",
-  "asset_tier_sui_5",
-  "asset_tier_sui_10",
-  "asset_tier_sui_20",
-  "asset_tier_sui_50",
   "asset_tier_sui_100",
+  "asset_tier_sui_200",
+  "asset_tier_sui_500",
+  "asset_tier_sui_1000",
+  "asset_tier_sui_2000",
+  "asset_tier_sui_5000",
+  "asset_tier_sui_10000",
 ];
 const amounts = [
-  1000000, 2000000, 5000000, 10000000, 20000000, 50000000, 100000000,
+  100000000, // 100
+  200000000, // 200
+  500000000, // 500
+  1000000000, // 1000
+  2000000000, // 2000
+  5000000000, // 5000
+  10000000000, // 10000
 ];
 
 const duration = 1209600;

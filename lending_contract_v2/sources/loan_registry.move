@@ -1,4 +1,4 @@
-module lending_contract_v2::loan_registry {
+module enso_lending::loan_registry {
     use sui::{
         balance::{Self, Balance},
         coin::{Coin, CoinMetadata},
@@ -7,15 +7,15 @@ module lending_contract_v2::loan_registry {
     };
     use std::string::String;
     use pyth::price_info::PriceInfoObject;
-    use lending_contract_v2::{
+    use enso_lending::{
         offer_registry::Offer,
         configuration::Configuration,
         custodian::Custodian,
         utils,
     };
 
-    use fun lending_contract_v2::price_feed::get_value_by_usd as PriceInfoObject.get_value_by_usd;
-    use fun lending_contract_v2::price_feed::get_price as PriceInfoObject.get_price;
+    use fun enso_lending::price_feed::get_value_by_usd as PriceInfoObject.get_value_by_usd;
+    use fun enso_lending::price_feed::get_price as PriceInfoObject.get_price;
     use fun std::string::utf8 as vector.to_string;
     use fun sui::coin::from_balance as Balance.to_coin;
 

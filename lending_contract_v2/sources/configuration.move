@@ -1,10 +1,10 @@
-module lending_contract_v2::configuration {
+module enso_lending::configuration {
     use sui::{
         dynamic_field as field,
         table::{Self, Table}
     };
     use std::string::String;
-    use lending_contract_v2::utils;
+    use enso_lending::utils;
 
     use fun std::string::utf8 as vector.to_string;
 

@@ -1,10 +1,10 @@
-module lending_contract_v2::loan {
+module enso_lending::loan {
     use sui::{
         coin::{Coin, CoinMetadata},
         clock::Clock,
     };
     use pyth::price_info::PriceInfoObject;
-    use lending_contract_v2::{
+    use enso_lending::{
         offer_registry::{Self, Offer, OfferKey},
         state::State,
         configuration::Configuration,
@@ -14,7 +14,7 @@ module lending_contract_v2::loan {
         utils,
     };
 
-    use fun lending_contract_v2::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
+    use fun enso_lending::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
 
     const EOfferNotFound: u64 = 1;
     const EOfferIsNotActive: u64 = 2;

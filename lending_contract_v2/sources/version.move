@@ -1,4 +1,4 @@
-module lending_contract_v2::version {
+module enso_lending::version {
 
     const EVersionMismatch: u64 = 601;
 

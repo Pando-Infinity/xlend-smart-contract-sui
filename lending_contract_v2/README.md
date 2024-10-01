@@ -68,7 +68,7 @@ operator="0x9f6f133896d17d07aeb229ecf8ddf87d6d1839bcaacd5e47f4ae94c6d9ee5c14"
 - [ ] Initialize system
 
 ```bash
-node ./scripts/init_system.sh
+node ./scripts/init_system.js
 ```
 
 - [ ] Initialize asset tier
