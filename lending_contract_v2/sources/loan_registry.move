@@ -362,6 +362,7 @@ module enso_lending::loan_registry {
         lender_fee_percent: u64,
         ctx: &mut TxContext,
     ) {
+        assert!(loan.status == BORROWER_PAID_STATUS.to_string() || loan.status == LIQUIDATED_STATUS.to_string(), EInvalidLoanStatus);
         let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
         let lender_fee_amount = ((interest_amount * lender_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64);
         let repay_to_lender_amount = loan.amount + interest_amount - lender_fee_amount;
