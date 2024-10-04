@@ -450,6 +450,34 @@ module enso_lending::loan_registry {
         liquidated_tx: String,
     ) {
         assert!(true, EDeprecatedFunction);
+        assert!(loan.status == LIQUIDATING_STATUS.to_string(), EInvalidLoanStatus);
+        assert!(loan.liquidation.is_some(), ELiquidationIsNull );
+
+        let liquidation = loan.liquidation.borrow_mut();
+        liquidation.liquidated_price = option::some<u64>(liquidated_price);
+        liquidation.liquidated_tx = option::some<String>(liquidated_tx);
+    
+        let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
+        let borrower_fee_amount = ((interest_amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
+        let repay_amount = loan.amount + borrower_fee_amount + interest_amount;
+        let remain_amount = collateral_swapped_amount - repay_amount;
+
+        assert!(remaining_fund_to_borrower.value<LendCoinType>() == remain_amount, EInvalidCoinInput);
+
+        transfer::public_transfer(remaining_fund_to_borrower, loan.borrower);
+
+        loan.status = LIQUIDATED_STATUS.to_string();
+
+        event::emit(LiquidatedCollateralEvent {
+            lender: loan.lender,
+            borrower: loan.borrower,
+            loan_id: object::id(loan),
+            collateral_swapped_amount,
+            status: loan.status,
+            liquidated_price,
+            liquidated_tx,
+            remaining_fund_to_borrower: remain_amount,
+        });
     }
 
     public(package) fun system_liquidate_loan_offer_v2<LendCoinType, CollateralCoinType>(
