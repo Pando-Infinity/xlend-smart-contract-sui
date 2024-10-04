@@ -29,6 +29,7 @@ module enso_lending::loan_registry {
     const ECollateralIsInsufficient: u64 = 9;
     const ECanNotLiquidateValidCollateral: u64 = 10;
     const ECanNotLiquidateUnexpiredLoan: u64 = 11;
+    const EDeprecatedFunction: u64 = 12;
 
     const MATCHED_STATUS: vector<u8> = b"Matched";
     const FUND_TRANSFERRED_STATUS: vector<u8> = b"FundTransferred";
@@ -447,8 +448,8 @@ module enso_lending::loan_registry {
         collateral_swapped_amount: u64,
         liquidated_price: u64,
         liquidated_tx: String,
-        ctx: &mut TxContext,
     ) {
+        assert!(true, EDeprecatedFunction);
         assert!(loan.status == LIQUIDATING_STATUS.to_string(), EInvalidLoanStatus);
         assert!(loan.liquidation.is_some(), ELiquidationIsNull );
 
@@ -459,14 +460,11 @@ module enso_lending::loan_registry {
         let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
         let borrower_fee_amount = ((interest_amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
         let repay_amount = loan.amount + borrower_fee_amount + interest_amount;
-        let refund_amount = collateral_swapped_amount - repay_amount;
+        let remain_amount = collateral_swapped_amount - repay_amount;
 
-        assert!(remaining_fund_to_borrower.value<LendCoinType>() == refund_amount + borrower_fee_amount, EInvalidCoinInput);
+        assert!(remaining_fund_to_borrower.value<LendCoinType>() == remain_amount, EInvalidCoinInput);
 
-        let mut refund_amount_balance = remaining_fund_to_borrower.into_balance<LendCoinType>();
-        let borrower_fee_balance = refund_amount_balance.split<LendCoinType>(borrower_fee_amount);
-        transfer::public_transfer(refund_amount_balance.to_coin(ctx), loan.borrower);
-        transfer::public_transfer(borrower_fee_balance.to_coin(ctx), @admin);
+        transfer::public_transfer(remaining_fund_to_borrower, loan.borrower);
 
         loan.status = LIQUIDATED_STATUS.to_string();
 
@@ -478,7 +476,49 @@ module enso_lending::loan_registry {
             status: loan.status,
             liquidated_price,
             liquidated_tx,
-            remaining_fund_to_borrower: refund_amount,
+            remaining_fund_to_borrower: remain_amount,
+        });
+    }
+
+    public(package) fun system_liquidate_loan_offer_v2<LendCoinType, CollateralCoinType>(
+        loan: &mut Loan<LendCoinType, CollateralCoinType>,
+        custodian: &mut Custodian<LendCoinType>,
+        remaining_fund: Coin<LendCoinType>,
+        borrower_fee_percent: u64,
+        collateral_swapped_amount: u64,
+        liquidated_price: u64,
+        liquidated_tx: String,
+        ctx: &mut TxContext
+    ) {
+        assert!(loan.status == LIQUIDATING_STATUS.to_string(), EInvalidLoanStatus);
+        assert!(loan.liquidation.is_some(), ELiquidationIsNull );
+
+        let liquidation = loan.liquidation.borrow_mut();
+        liquidation.liquidated_price = option::some<u64>(liquidated_price);
+        liquidation.liquidated_tx = option::some<String>(liquidated_tx);
+    
+        let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
+        assert!(collateral_swapped_amount == remaining_fund.value<LendCoinType>() + loan.amount + interest_amount, EInvalidCoinInput);
+
+        let borrower_fee_amount = ((interest_amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
+        let refund_to_borrower_amount = remaining_fund.value<LendCoinType>() - borrower_fee_amount;
+
+        let mut remaining_fund_balance = remaining_fund.into_balance<LendCoinType>();
+        let borrower_fee_balance = remaining_fund_balance.split<LendCoinType>(borrower_fee_amount);
+        custodian.add_treasury_balance<LendCoinType>(borrower_fee_balance);
+        transfer::public_transfer(remaining_fund_balance.to_coin<LendCoinType>(ctx), loan.borrower);
+
+        loan.status = LIQUIDATED_STATUS.to_string();
+
+        event::emit(LiquidatedCollateralEvent {
+            lender: loan.lender,
+            borrower: loan.borrower,
+            loan_id: object::id(loan),
+            collateral_swapped_amount,
+            status: loan.status,
+            liquidated_price,
+            liquidated_tx,
+            remaining_fund_to_borrower: refund_to_borrower_amount,
         });
     }
 

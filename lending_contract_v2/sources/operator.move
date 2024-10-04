@@ -329,7 +329,6 @@ module enso_lending::operator {
         collateral_swapped_amount: u64,
         liquidated_price: u64,
         liquidated_tx: String,
-        ctx: &mut TxContext,
     ) {
         version.assert_current_version();
 
@@ -338,6 +337,35 @@ module enso_lending::operator {
         let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
 
         loan.system_liquidate_loan_offer(
+            remaining_fund_to_borrower,
+            configuration.borrower_fee_percent(),
+            collateral_swapped_amount,
+            liquidated_price,
+            liquidated_tx,
+        );
+    }
+
+    public entry fun system_liquidate_loan_offer_v2<LendCoinType, CollateralCoinType>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &Configuration,
+        custodian: &mut Custodian<LendCoinType>,
+        state: &mut State,
+        loan_id: ID,
+        remaining_fund_to_borrower: Coin<LendCoinType>,
+        collateral_swapped_amount: u64,
+        liquidated_price: u64,
+        liquidated_tx: String,
+        ctx: &mut TxContext,
+    ) {
+        version.assert_current_version();
+
+        let loan_key = loan_registry::new_loan_key<LendCoinType, CollateralCoinType>(loan_id);
+        assert!(state.contain<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key), ELoanNotFound);
+        let loan = state.borrow_mut<LoanKey<LendCoinType, CollateralCoinType>, Loan<LendCoinType, CollateralCoinType>>(loan_key);
+
+        loan.system_liquidate_loan_offer_v2(
+            custodian,
             remaining_fund_to_borrower,
             configuration.borrower_fee_percent(),
             collateral_swapped_amount,
