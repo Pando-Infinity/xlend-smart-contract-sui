@@ -447,18 +447,33 @@ module enso_lending::loan_registry {
         collateral_swapped_amount: u64,
         liquidated_price: u64,
         liquidated_tx: String,
-        ctx: &mut TxContext,
     ) {
-        let borrower_fee_balance = loan.finish_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
-            remaining_fund_to_borrower,
-            borrower_fee_percent,
+        assert!(loan.status == LIQUIDATING_STATUS.to_string(), EInvalidLoanStatus);
+        assert!(loan.liquidation.is_some(), ELiquidationIsNull );
+
+        let liquidation = loan.liquidation.borrow_mut();
+        liquidation.liquidated_price = option::some<u64>(liquidated_price);
+        liquidation.liquidated_tx = option::some<String>(liquidated_tx);
+    
+        let interest_amount = ((loan.amount * loan.interest / DEFAULT_RATE_FACTOR * loan.duration as u128) / (SECOND_IN_YEAR as u128) as u64);
+        let borrower_fee_amount = ((interest_amount * borrower_fee_percent as u128) / (DEFAULT_RATE_FACTOR as u128) as u64 );
+        assert!(collateral_swapped_amount == remaining_fund_to_borrower.value<LendCoinType>() + loan.amount + interest_amount + borrower_fee_amount, EInvalidCoinInput);
+        let remain_amount = remaining_fund_to_borrower.value<LendCoinType>();
+
+        transfer::public_transfer(remaining_fund_to_borrower, loan.borrower);
+
+        loan.status = LIQUIDATED_STATUS.to_string();
+
+        event::emit(LiquidatedCollateralEvent {
+            lender: loan.lender,
+            borrower: loan.borrower,
+            loan_id: object::id(loan),
             collateral_swapped_amount,
+            status: loan.status,
             liquidated_price,
             liquidated_tx,
-            ctx,
-        );
-
-        transfer::public_transfer(borrower_fee_balance.to_coin(ctx), @admin);
+            remaining_fund_to_borrower: remain_amount,
+        });
     }
 
     public(package) fun system_liquidate_loan_offer_to_custodian<LendCoinType, CollateralCoinType>(
