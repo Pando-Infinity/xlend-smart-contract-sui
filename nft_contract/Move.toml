@@ -1,0 +1,14 @@
+[package]
+name = "nft_contract"
+edition = "2024.beta"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "041c5f2bae2fe52079e44b70514333532d69f4e6", override = true }
+Kiosk = { git= "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "testnet" }
+
+[addresses]
+nft_contract = "0x0"
+admin="0x465370ebd8b13a08d34d92fc6911fa98869c85931135339ad1f858090022635b"
+operator="0x465370ebd8b13a08d34d92fc6911fa98869c85931135339ad1f858090022635b"
+
+ 
