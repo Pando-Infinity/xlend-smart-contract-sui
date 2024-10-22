@@ -329,7 +329,6 @@ module enso_lending::operator {
         collateral_swapped_amount: u64,
         liquidated_price: u64,
         liquidated_tx: String,
-        ctx: &mut TxContext,
     ) {
         version.assert_current_version();
 
@@ -343,7 +342,6 @@ module enso_lending::operator {
             collateral_swapped_amount,
             liquidated_price,
             liquidated_tx,
-            ctx,
         );
     }
 
