@@ -1,27 +1,19 @@
 module enso_lending::offer_registry {
-    use sui::{
-        coin::{Self, Coin},
-        event,
-    };
+    use sui::event;
     use std::string::String;
     
     use fun std::string::utf8 as vector.to_string;
-
-    const EInvalidOfferStatus: u64 = 1;
-    const ESenderIsNotOfferOwner: u64 = 2;
-    const ELendCoinIsInvalid: u64 = 3;
-
 
     const CREATED_STATUS: vector<u8> = b"Created";
     const CANCELLING_STATUS: vector<u8> = b"Cancelling";
     const CANCELLED_STATUS: vector<u8> = b"Cancelled";
     const LOANED_STATUS: vector<u8> = b"Loaned";
 
-    public struct OfferKey<phantom T> has store, copy, drop {
+    public struct OfferKey<phantom LendCoinType> has store, copy, drop {
         offer_id: ID,
     } 
 
-    public struct Offer<phantom T> has key, store {
+    public struct Offer<phantom LendCoinType> has key, store {
         id: UID,
         asset_tier: ID,
         amount: u64,
@@ -67,7 +59,7 @@ module enso_lending::offer_registry {
     }
 
     
-    public(package) fun new_offer<T>(
+    public(package) fun new_offer<LendCoinType>(
         asset_tier: ID,
         asset_tier_name: String,
         lend_amount: u64,
@@ -75,8 +67,8 @@ module enso_lending::offer_registry {
         interest: u64,
         lender: address,
         ctx: &mut TxContext,
-    ): Offer<T> {
-        let offer = Offer<T> {
+    ): Offer<LendCoinType> {
+        let offer = Offer<LendCoinType> {
             id: object::new(ctx),
             asset_tier,
             amount: lend_amount,
@@ -100,13 +92,10 @@ module enso_lending::offer_registry {
         offer
     }
 
-    public(package) fun cancel_offer<T>(
-        offer: &mut Offer<T>,
+    public(package) fun cancel_offer<LendCoinType>(
+        offer: &mut Offer<LendCoinType>,
         sender: address,
     ) {
-        assert!(sender == offer.lender, ESenderIsNotOfferOwner);
-        assert!(offer.status == CREATED_STATUS.to_string(), EInvalidOfferStatus);
-
         offer.status = CANCELLING_STATUS.to_string();
 
         event::emit(RequestCancelOfferEvent {
@@ -118,14 +107,11 @@ module enso_lending::offer_registry {
         });
     }
 
-    public(package) fun edit_offer<T>(
-        offer: &mut Offer<T>,
+    public(package) fun edit_offer<LendCoinType>(
+        offer: &mut Offer<LendCoinType>,
         interest: u64,
         sender: address,
     ) {
-        assert!(sender == offer.lender, ESenderIsNotOfferOwner);
-        assert!(offer.status == CREATED_STATUS.to_string(), EInvalidOfferStatus);
-
         offer.interest = interest;
 
         event::emit(EditedOfferEvent {
@@ -137,82 +123,73 @@ module enso_lending::offer_registry {
         });
     }
 
-    public(package) fun system_cancel_offer<T>(
-        offer: &mut Offer<T>,
-        lend_coin: Coin<T>,
-        waiting_interest: Coin<T>,
-        ctx: &mut TxContext,
+    public(package) fun system_cancel_offer<LendCoinType>(
+        offer: &mut Offer<LendCoinType>,
     ) {
-        let lend_amount = offer.amount;
-        let lender = offer.lender;
-
-        assert!(offer.status == CANCELLING_STATUS.to_string(), EInvalidOfferStatus);
-        assert!(lend_coin.value() == lend_amount, ELendCoinIsInvalid);
-
-        let mut refund_coin = coin::zero<T>(ctx);
-        refund_coin.join<T>(lend_coin);
-        refund_coin.join<T>(waiting_interest);
-        transfer::public_transfer(refund_coin, lender);
-
         offer.status = CANCELLED_STATUS.to_string();
 
         event::emit(CancelledOfferEvent {
             offer_id: object::id(offer),
-            amount: lend_amount,
+            amount: offer.amount,
             duration: offer.duration,
             interest: offer.interest,
-            lender: lender,
+            lender: offer.lender,
         });
     }
 
-    public(package) fun take_loan<T>(
-        offer: &mut Offer<T>,
+    public(package) fun take_loan<LendCoinType>(
+        offer: &mut Offer<LendCoinType>,
     ) {
         offer.status = LOANED_STATUS.to_string();
     }
 
-    public fun new_offer_key<T>(
+    public fun new_offer_key<LendCoinType>(
         offer_id: ID,
-    ): OfferKey<T> {
-        OfferKey<T> {
+    ): OfferKey<LendCoinType> {
+        OfferKey<LendCoinType> {
             offer_id,
         }
     }
 
-    public fun is_available<T>(
-        offer: &Offer<T>
+    public fun is_created_status<LendCoinType>(
+        offer: &Offer<LendCoinType>
     ): bool {
         offer.status == CREATED_STATUS.to_string()
     }
 
-    public fun amount<T>(
-        offer: &Offer<T>
+    public fun is_cancelling_status<LendCoinType>(
+        offer: &Offer<LendCoinType>
+    ): bool {
+        offer.status == CANCELLING_STATUS.to_string()
+    }
+
+    public fun amount<LendCoinType>(
+        offer: &Offer<LendCoinType>
     ): u64 {
         offer.amount
     }
 
-    public fun interest<T>(
-        offer: &Offer<T>
+    public fun interest<LendCoinType>(
+        offer: &Offer<LendCoinType>
     ): u64 {
         offer.interest
     }
 
-    public fun duration<T>(
-        offer: &Offer<T>
+    public fun duration<LendCoinType>(
+        offer: &Offer<LendCoinType>
     ): u64 {
         offer.duration
     }
 
-    public fun lender<T>(
-        offer: &Offer<T>
+    public fun lender<LendCoinType>(
+        offer: &Offer<LendCoinType>
     ): address {
         offer.lender
     }
 
-    public fun asset_tier<T>(
-        offer: &Offer<T>
+    public fun asset_tier<LendCoinType>(
+        offer: &Offer<LendCoinType>
     ): ID {
         offer.asset_tier
     }
-
 }
