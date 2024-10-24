@@ -1,18 +1,15 @@
 module enso_lending::operator_loan {
 	use std::string::String;
-    use sui::coin::{Coin, CoinMetadata};
+    use sui::coin::Coin;
     use sui::balance::Balance;
     use sui::clock::Clock;
 
     use pyth::price_info::PriceInfoObject;    
     use enso_lending::{
         version::{Version},
-        configuration::{Self, Configuration},
+        configuration::Configuration,
         custodian::Custodian,
-        state::{Self, State},
-        custodian,
-        asset_tier::{Self, AssetTierKey, AssetTier},
-        offer_registry::{Self, OfferKey, Offer},
+        state::State,
         loan_registry::{Self, Loan, LoanKey, is_valid_collateral_amount},
         asset::Asset,
         operator::OperatorCap,
@@ -20,7 +17,6 @@ module enso_lending::operator_loan {
     };
 
     use fun enso_lending::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
-    use fun enso_lending::price_feed::get_value_by_usd as PriceInfoObject.get_value_by_usd;
     use fun enso_lending::price_feed::get_price as PriceInfoObject.get_price;
     use fun sui::coin::from_balance as Balance.to_coin;
 
@@ -33,7 +29,6 @@ module enso_lending::operator_loan {
 	const ENotEnoughBalanceToRepay: u64 = 7;
 	const ECanNotLiquidateValidCollateral: u64 = 8;
     const ECanNotLiquidateUnexpiredLoan: u64 = 9;
-	const ELiquidationIsNull: u64 = 10;
     const EInvalidCoinInput: u64 = 11;
 
     public entry fun system_fund_transfer<LendCoinType, CollateralCoinType>(
@@ -96,10 +91,7 @@ module enso_lending::operator_loan {
 
         transfer::public_transfer(repay_balance.to_coin(ctx), loan.lender());
         
-        loan.system_finish_loan<LendCoinType, CollateralCoinType>(
-			repay_to_lender_amount,
-            ctx,
-        );
+        loan.system_finish_loan<LendCoinType, CollateralCoinType>(repay_to_lender_amount);
     }
 
 	public entry fun start_liquidate_loan_offer_health<LendCoinType, CollateralCoinType>(
@@ -149,7 +141,6 @@ module enso_lending::operator_loan {
         loan.start_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
 			liquidating_price,
 			current_timestamp,
-            ctx,
         );
     }
 
@@ -179,7 +170,6 @@ module enso_lending::operator_loan {
         loan.start_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
 			0,
 			current_timestamp,
-            ctx,
         );
     }
 
@@ -216,12 +206,10 @@ module enso_lending::operator_loan {
         custodian.add_treasury_balance<LendCoinType>(borrower_fee_balance);
 
         loan.finish_liquidate_loan_offer(
-            configuration.borrower_fee_percent(),
             collateral_swapped_amount,
 			refund_to_borrower_amount,
             liquidated_price,
             liquidated_tx,
-            ctx,
         );
     }
 }

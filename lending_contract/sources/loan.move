@@ -1,7 +1,7 @@
 module enso_lending::loan {
     use std::string::String;
     use sui::{
-        coin::{Coin, CoinMetadata},
+        coin::Coin,
         balance::Balance,
         clock::Clock,
     };
@@ -18,8 +18,6 @@ module enso_lending::loan {
     };
 
     use fun enso_lending::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
-    use fun enso_lending::price_feed::get_value_by_usd as PriceInfoObject.get_value_by_usd;
-    use fun enso_lending::price_feed::get_price as PriceInfoObject.get_price;
     use fun sui::coin::from_balance as Balance.to_coin;
 
     const EOfferNotFound: u64 = 1;
@@ -65,7 +63,7 @@ module enso_lending::loan {
         let offer_key = offer_registry::new_offer_key<LendCoinType>(offer_id);
         assert!(state.contain<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key), EOfferNotFound);
         let offer = { state.borrow_mut<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key) };
-        assert!(offer.is_available<LendCoinType>(), EOfferIsNotActive);
+        assert!(offer.is_created_status<LendCoinType>(), EOfferIsNotActive);
         assert!(interest == offer.interest(),  EInterestIsInvalid);
 
         assert!(is_valid_collateral_amount<LendCoinType, CollateralCoinType>(
@@ -84,7 +82,6 @@ module enso_lending::loan {
             offer,
             borrower,
             current_timestamp,
-            clock,
             ctx,
         );
 
@@ -140,7 +137,6 @@ module enso_lending::loan {
             collateral_amount,
             lend_token,
             collateral_token,
-            ctx,
         );
     }
 

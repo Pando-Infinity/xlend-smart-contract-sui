@@ -7,7 +7,6 @@ module enso_lending::price_feed {
         price::Price,
     };
     use enso_lending::{
-        configuration::Configuration,
         asset::Asset,
         utils,
     };
@@ -15,7 +14,6 @@ module enso_lending::price_feed {
     use fun i64_to_u64 as I64.to_u64;
     use fun is_negative as I64.is_negative;
     use fun enso_lending::utils::vector_to_hex_char as vector.to_hex_char;
-    use fun std::string::from_ascii as std::ascii::String.to_string;
     use fun pyth::price_info::get_price_info_from_price_info_object as PriceInfoObject.to_price_info;
 
     public fun get_price(

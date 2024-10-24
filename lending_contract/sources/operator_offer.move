@@ -1,41 +1,39 @@
 module enso_lending::operator_offer {
-	use std::string::String;
-    use sui::coin::{Coin, CoinMetadata};
-    use sui::balance::Balance;
-    use sui::clock::Clock;
-
-    use pyth::price_info::PriceInfoObject;    
+    use sui::coin::{Self, Coin};
     use enso_lending::{
         version::{Version},
-        configuration::{Self, Configuration},
-        custodian::Custodian,
-        state::{Self, State},
-        custodian,
-        asset_tier::{Self, AssetTierKey, AssetTier},
+        state::State,
         offer_registry::{Self, OfferKey, Offer},
-        asset::Asset,
         operator::OperatorCap,
-        utils::{Self, default_rate_factor, seconds_in_year},
     };
 
-    public entry fun system_cancel_offer<T>(
+    const ENotFoundOfferToCancel: u64 = 1;
+    const EInvalidOfferStatus: u64 = 2;
+    const ELendCoinIsInvalid: u64 = 3;
+
+    public entry fun system_cancel_offer<LendCoinType>(
         _: &OperatorCap,
         version: &Version,
         state: &mut State,
         offer_id: ID,
-        lend_coin: Coin<T>,
-        waiting_interest: Coin<T>,
+        lend_coin: Coin<LendCoinType>,
+        waiting_interest: Coin<LendCoinType>,
         ctx: &mut TxContext,
     ) {
         version.assert_current_version();
 
-        let offer_key = offer_registry::new_offer_key<T>(offer_id);
-        assert!(state.contain<OfferKey<T>, Offer<T>>(offer_key), ENotFoundOfferToCancel);
-        let offer = state.borrow_mut<OfferKey<T>, Offer<T>>(offer_key);
-        offer.system_cancel_offer(
-            lend_coin,
-            waiting_interest,
-            ctx,
-        );
+        let offer_key = offer_registry::new_offer_key<LendCoinType>(offer_id);
+        assert!(state.contain<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key), ENotFoundOfferToCancel);
+        let offer = state.borrow_mut<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key);
+
+        assert!(offer.is_cancelling_status<LendCoinType>(), EInvalidOfferStatus);
+        assert!(lend_coin.value() == offer.amount(), ELendCoinIsInvalid);
+
+        let mut refund_coin = coin::zero<LendCoinType>(ctx);
+        refund_coin.join<LendCoinType>(lend_coin);
+        refund_coin.join<LendCoinType>(waiting_interest);
+        transfer::public_transfer(refund_coin, offer.lender());
+
+        offer.system_cancel_offer();
     }
 }

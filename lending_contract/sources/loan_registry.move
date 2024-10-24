@@ -1,7 +1,7 @@
 module enso_lending::loan_registry {
     use sui::{
         balance::{Self, Balance},
-        coin::{Coin, CoinMetadata},
+        coin::Coin,
         clock::Clock,
         event,
     };
@@ -9,8 +9,6 @@ module enso_lending::loan_registry {
     use pyth::price_info::PriceInfoObject;
     use enso_lending::{
         offer_registry::Offer,
-        configuration::Configuration,
-        custodian::Custodian,
         asset::Asset,
         utils::{Self, default_rate_factor},
     };
@@ -142,7 +140,6 @@ module enso_lending::loan_registry {
         offer: &Offer<LendCoinType>,
         borrower: address,
         start_timestamp: u64,
-        clock: &Clock,
         ctx: &mut TxContext,
     ): Loan<LendCoinType, CollateralCoinType> {
         let collateral_amount = collateral.value<CollateralCoinType>();
@@ -183,7 +180,6 @@ module enso_lending::loan_registry {
         collateral_amount: u64,
         lend_token: String,
         collateral_token: String,
-        ctx: &mut TxContext,
     ) {
         loan.status = BORROWER_PAID_STATUS.to_string();
 
@@ -199,7 +195,7 @@ module enso_lending::loan_registry {
 
     #[allow(lint(self_transfer))]
     public(package) fun withdraw_collateral<LendCoinType, CollateralCoinType>(
-        loan: &mut Loan<LendCoinType, CollateralCoinType>,
+        loan: &Loan<LendCoinType, CollateralCoinType>,
         withdraw_amount: u64,
         remaining_collateral_amount: u64,
         current_timestamp: u64,
@@ -214,7 +210,7 @@ module enso_lending::loan_registry {
     }
 
     public(package) fun deposit_collateral<LendCoinType, CollateralCoinType>(
-        loan: &mut Loan<LendCoinType, CollateralCoinType>,
+        loan: &Loan<LendCoinType, CollateralCoinType>,
         asset_tier: ID,
         lender_fee_percent: u64,
         borrower_fee_percent: u64,
@@ -266,7 +262,6 @@ module enso_lending::loan_registry {
     public(package) fun system_finish_loan<LendCoinType, CollateralCoinType>(
         loan: &mut Loan<LendCoinType, CollateralCoinType>,
         repay_to_lender_amount: u64,
-        ctx: &mut TxContext,
     ) {
         loan.status = FINISHED_STATUS.to_string();
 
@@ -283,7 +278,6 @@ module enso_lending::loan_registry {
         loan: &mut Loan<LendCoinType, CollateralCoinType>,
         liquidating_price: u64,
         liquidating_at: u64,
-        ctx: &mut TxContext,
     ) {
         if (loan.liquidation.is_none()) {
             loan.liquidation = option::some<Liquidation<LendCoinType, CollateralCoinType>>(Liquidation {
@@ -309,12 +303,10 @@ module enso_lending::loan_registry {
 
     public(package) fun finish_liquidate_loan_offer<LendCoinType, CollateralCoinType>(
         loan: &mut Loan<LendCoinType, CollateralCoinType>,
-        borrower_fee_percent: u64,
         collateral_swapped_amount: u64,
         refund_to_borrower_amount: u64,
         liquidated_price: u64,
         liquidated_tx: String,
-        ctx: &mut TxContext,
     ) {
         let liquidation = loan.liquidation.borrow_mut();
         liquidation.liquidated_price = option::some<u64>(liquidated_price);

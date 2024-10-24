@@ -1,23 +1,14 @@
 module enso_lending::operator {
     use std::string::String;
-    use sui::coin::{Coin, CoinMetadata};
-    use sui::clock::Clock;
-
-    use pyth::price_info::PriceInfoObject;    
     use enso_lending::{
         version::{Version},
         configuration::{Self, Configuration},
-        custodian::Custodian,
         state::{Self, State},
         custodian,
         asset_tier::{Self, AssetTierKey, AssetTier},
-        offer_registry::{Self, OfferKey, Offer},
-        loan_registry::{Self, Loan, LoanKey},
+        asset::{Self, Asset},
         utils,
     };
-    use fun enso_lending::price_feed::is_valid_price_info_object as PriceInfoObject.is_valid;
-
-    const ENotFoundOfferToCancel: u64 = 1;
 
     public struct OperatorCap has key, store {
         id: UID
@@ -72,6 +63,61 @@ module enso_lending::operator {
             min_health_ratio,
             hot_wallet,
         );
+    }
+
+    public entry fun add_asset<CoinType>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &mut Configuration,
+        name: String,
+        symbol: String,
+        decimals: u8,
+		is_lend_coin: bool,
+		is_collateral_coin: bool,
+		price_feed_id: String,
+		max_price_age_seconds: u64,
+		ctx: &mut TxContext
+    ) {
+        version.assert_current_version();
+
+        let coin_type = utils::get_type<CoinType>();
+        let asset = asset::new<CoinType>(
+            name,
+            symbol,
+            decimals,
+            is_lend_coin,
+            is_collateral_coin,
+            price_feed_id,
+            max_price_age_seconds,
+            ctx,
+        );
+        configuration.add<String, Asset<CoinType>>(coin_type, asset);
+    }
+
+    public entry fun update_asset<CoinType>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &mut Configuration,
+        price_feed_id: String,
+        max_price_age_seconds: u64,
+    ) {
+        version.assert_current_version();
+
+        let coin_type = utils::get_type<CoinType>();
+        let asset = configuration.borrow_mut<String, Asset<CoinType>>(coin_type);
+        asset.update<CoinType>(price_feed_id, max_price_age_seconds);
+    }
+
+    public entry fun delete_asset<CoinType>(
+        _: &OperatorCap,
+        version: &Version,
+        configuration: &mut Configuration,
+    ) {
+        version.assert_current_version();
+
+        let coin_type = utils::get_type<CoinType>();
+        let asset = configuration.remove<String, Asset<CoinType>>(coin_type);
+        asset.delete<CoinType>();
     }
 
     public entry fun init_asset_tier<T>(

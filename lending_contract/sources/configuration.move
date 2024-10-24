@@ -1,16 +1,7 @@
 module enso_lending::configuration {
     use sui::{
         dynamic_field as field,
-        table::{Self, Table}
     };
-    use std::string::String;
-    use enso_lending::utils;
-
-    use fun std::string::utf8 as vector.to_string;
-
-    const EPriceFeedIdAlreadyExisted: u64 = 1;
-    const EPriceFeedIdIsNotExisted: u64 = 2;
-    const ETokenAlreadyAdded: u64 = 3;
 
     public struct Configuration has key, store {
         id: UID,
