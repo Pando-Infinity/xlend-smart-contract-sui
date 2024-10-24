@@ -10,6 +10,8 @@ module enso_lending::operator {
         utils,
     };
 
+    const EAssetAlreadyExist: u64 = 1;
+
     public struct OperatorCap has key, store {
         id: UID
     }
@@ -81,6 +83,7 @@ module enso_lending::operator {
         version.assert_current_version();
 
         let coin_type = utils::get_type<CoinType>();
+        assert!(!configuration.contain<String, Asset<CoinType>>(coin_type), EAssetAlreadyExist);
         let asset = asset::new<CoinType>(
             name,
             symbol,

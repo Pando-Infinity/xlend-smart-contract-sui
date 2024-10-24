@@ -80,7 +80,7 @@ module enso_lending::operator_loan {
         let lender_fee_amount = ((interest_amount * configuration.lender_fee_percent() as u128) / (default_rate_factor() as u128) as u64);
         let repay_to_lender_amount = loan.amount() + interest_amount - lender_fee_amount;
 
-        assert!(repay_coin.value<LendCoinType>() == repay_to_lender_amount + lender_fee_amount, ENotEnoughBalanceToRepay);
+        assert!(repay_coin.value<LendCoinType>() == loan.amount() + interest_amount, ENotEnoughBalanceToRepay);
 
         let mut repay_balance = repay_coin.into_balance<LendCoinType>();
         let lender_fee_balance = repay_balance.split(lender_fee_amount);

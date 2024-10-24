@@ -71,6 +71,7 @@ module enso_lending::offer {
 
     public entry fun edit_offer<LendCoinType>(
         version: &Version,
+        configuration: &Configuration,
         state: &mut State,
         offer_id: ID,
         interest: u64,
@@ -83,7 +84,8 @@ module enso_lending::offer {
         let offer = state.borrow_mut<OfferKey<LendCoinType>, Offer<LendCoinType>>(offer_key);
         assert!(sender == offer.lender(), ESenderIsNotOfferOwner);
         assert!(offer.is_created_status(), EInvalidOfferStatus);
-        
+        assert!(interest > 0 && interest <= configuration.max_offer_interest(), EInvalidInterestValue);
+
         offer.edit_offer(interest, sender);
     }
 }
