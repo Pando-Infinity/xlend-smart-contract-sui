@@ -1,33 +1,30 @@
-module lending_contract::asset_tier {
-    use sui::tx_context::TxContext;
-    use sui::object::{Self, UID, ID};
+module enso_lending::asset_tier {
     use sui::event;
+    use std::string::String;
 
-    use std::string::{String};
-
-    friend lending_contract::operator;
-
-    struct NewAssetTierEvent has copy, drop {
+    public struct NewAssetTierEvent has copy, drop {
         id: ID,
         name: String,
         amount: u64,
         duration: u64,
+        lend_token: String,
     }
 
-    struct AssetTierKey<phantom T> has copy, drop, store {
+    public struct AssetTierKey<phantom T> has copy, drop, store {
         name: String
     }
 
-    struct AssetTier<phantom T> has key, store {
+    public struct AssetTier<phantom T> has key, store {
         id: UID,
         amount: u64,
         duration: u64,
     }
 
-    public(friend) fun new<T>(
+    public(package) fun new<T>(
         name: String,
         amount: u64,
         duration: u64,
+        lend_token: String,
         ctx: &mut TxContext,
     ): AssetTier<T> {
         let asset_tier = AssetTier<T> {
@@ -41,18 +38,26 @@ module lending_contract::asset_tier {
             name,
             amount,
             duration,
+            lend_token,
         });
 
         asset_tier
     }
 
-    public(friend) fun update<T>(
+    public(package) fun update<T>(
         asset_tier: &mut AssetTier<T>,
         amount: u64,
         duration: u64,
     ) {
         asset_tier.amount = amount;
         asset_tier.duration = duration;
+    }
+
+    public(package) fun delete<T>(
+        asset_tier: AssetTier<T>,
+    ) {
+        let AssetTier {id, amount:_, duration:_ } = asset_tier;
+        object::delete(id);
     }
 
     public fun new_asset_tier_key<T>(
@@ -62,6 +67,12 @@ module lending_contract::asset_tier {
             name,
         }
     }
+
+    public fun id<T>(
+        asset_tier: &AssetTier<T>
+    ): ID {
+        object::id(asset_tier)
+    }    
 
     public fun amount<T>(
         asset_tier: &AssetTier<T>
@@ -73,11 +84,5 @@ module lending_contract::asset_tier {
         asset_tier: &AssetTier<T>
     ): u64 {
         asset_tier.duration
-    }
-
-    public fun id<T>(
-        asset_tier: &AssetTier<T>
-    ): ID {
-        object::id(asset_tier)
     }
 }
