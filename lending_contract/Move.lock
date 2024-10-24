@@ -2,39 +2,56 @@
 
 [move]
 version = 2
-manifest_digest = "D05D2D282EC78ACBE7B5066783C30667E5EC1263991F58C3BD05B8B5ABF10F77"
+manifest_digest = "EB8709BCA1864CE0BCC07B8CC7B57DEB628CB50B33D3AB7285454254B88A5AC0"
 deps_digest = "F8BBB0CCB2491CA29A3DF03D6F92277A4F3574266507ACD77214D37ECA3F3082"
 dependencies = [
-  { name = "Sui" },
+  { name = "Pyth" },
 ]
 
 [[move.package]]
 name = "MoveStdlib"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "testnet", subdir = "crates/sui-framework/packages/move-stdlib" }
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "041c5f2bae2fe52079e44b70514333532d69f4e6", subdir = "crates/sui-framework/packages/move-stdlib" }
+
+[[move.package]]
+name = "Pyth"
+source = { git = "https://github.com/pyth-network/pyth-crosschain.git", rev = "sui-contract-testnet", subdir = "target_chains/sui/contracts" }
+
+dependencies = [
+  { name = "Sui" },
+  { name = "Wormhole" },
+]
 
 [[move.package]]
 name = "Sui"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "testnet", subdir = "crates/sui-framework/packages/sui-framework" }
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "041c5f2bae2fe52079e44b70514333532d69f4e6", subdir = "crates/sui-framework/packages/sui-framework" }
 
 dependencies = [
   { name = "MoveStdlib" },
 ]
 
+[[move.package]]
+name = "Wormhole"
+source = { git = "https://github.com/wormhole-foundation/wormhole.git", rev = "sui-upgrade-testnet", subdir = "sui/wormhole" }
+
+dependencies = [
+  { name = "Sui" },
+]
+
 [move.toolchain-version]
-compiler-version = "1.27.0"
-edition = "legacy"
+compiler-version = "1.24.1"
+edition = "2024.beta"
 flavor = "sui"
 
 [env]
 
-[env.mainnet]
-chain-id = "35834a8a"
-original-published-id = "0xf87af7d7013ff689451568955593f741fa0477935082510929e16426168177cb"
-latest-published-id = "0xf87af7d7013ff689451568955593f741fa0477935082510929e16426168177cb"
-published-version = "1"
-
-[env.testnet]
+[env.testnet2]
 chain-id = "4c78adac"
-original-published-id = "0xd30d432e9cacf3500e0b4ee4fe5fe99388005e58b64ead45928a233f9fb3c72f"
-latest-published-id = "0xd30d432e9cacf3500e0b4ee4fe5fe99388005e58b64ead45928a233f9fb3c72f"
-published-version = "1"
+original-published-id = "0xc745d8c42dc2c1db32e9e75872bfa38f3983f8c85a3b3fbd9d7a76fdc9f82091"
+latest-published-id = "0x2a6ab06b44750a863df0ee4a9f70ae527d04fc6400f9f85199de5c330974167f"
+published-version = "2"
+
+[env.suim2]
+chain-id = "db4b6646"
+original-published-id = "0x236027e4e735890dbd4d7915372fa58693e3c5f431f71c4b83a0cbd60df911a5"
+latest-published-id = "0xc6b0e8387382fd3294ab3d68f4e689002ce44bc7a2dcd601431359879626ed7e"
+published-version = "3"

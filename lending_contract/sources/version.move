@@ -1,18 +1,15 @@
-module lending_contract::version {
-    use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
-    use sui::transfer;
-
-    const CURRENT_VERSION: u64 = 1;
+module enso_lending::version {
 
     const EVersionMismatch: u64 = 601;
 
-    struct Version has key, store {
+    const CURRENT_VERSION: u64 = 1;
+
+    public struct Version has key, store {
         id: UID,
         value: u64,
     }
 
-    struct VersionCap has key, store {
+    public struct VersionCap has key, store {
         id: UID
     }
 
@@ -28,12 +25,11 @@ module lending_contract::version {
         transfer::transfer(cap, tx_context::sender(ctx));
     }
 
-    // ======= version control ==========
-    public fun value(v: &Version): u64 { v.value }
-
-    public fun upgrade(_: &VersionCap, v: &mut Version) {
+    public entry fun upgrade(_: &VersionCap, v: &mut Version) {
         v.value = CURRENT_VERSION + 1;
     }
+
+    public fun value(v: &Version): u64 { v.value }
 
     public fun is_current_version(v: &Version): bool {
         v.value == CURRENT_VERSION
