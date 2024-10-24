@@ -7,6 +7,8 @@ module enso_lending::utils {
     use fun std::string::utf8 as vector.to_string;
 
     const HEXTABLE : vector<vector<u8>> = vector[b"0", b"1", b"2", b"3", b"4", b"5", b"6", b"7", b"8", b"9", b"a", b"b", b"c", b"d", b"e", b"f"];
+    const DEFAULT_RATE_FACTOR: u64 = 10000;
+    const SECOND_IN_YEAR: u64 = 31536000;
 
     public fun power(base: u64, exponent: u64): u64 {
         let mut result = 1;
@@ -53,5 +55,13 @@ module enso_lending::utils {
     public fun get_type<T>(): String {
         let type_name = type_name::get<T>();
         string::from_ascii(type_name.into_string())
+    }
+
+    public fun default_rate_factor(): u64 {
+        DEFAULT_RATE_FACTOR
+    }
+
+    public fun seconds_in_year(): u64 {
+        SECOND_IN_YEAR
     }
 }
